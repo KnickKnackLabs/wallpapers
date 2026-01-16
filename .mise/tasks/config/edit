@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Edit config file in your editor"
+set -e
+
+CONFIG_FILE="$HOME/.config/wallpapers/config.json"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    gum style --foreground 196 "❌ Config not found at $CONFIG_FILE"
+    gum style --foreground 245 "Run: mise run config:init"
+    exit 1
+fi
+
+${EDITOR:-nano} "$CONFIG_FILE"

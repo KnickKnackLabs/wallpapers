@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#MISE description="Generate wallpapers from config and optionally apply to spaces"
+#USAGE flag "--generate-only" help="Only generate wallpapers, don't apply to spaces"
+set -e
+
+# Auto-detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+# Build args for setup.swift
+SWIFT_ARGS=("--width" "$SCREEN_W" "--height" "$SCREEN_H")
+if [ "${usage_generate_only:-}" = "true" ]; then
+    SWIFT_ARGS+=("--generate-only")
+fi
+
+# Run setup.swift and capture output
+OUTPUT=$(swift src/setup.swift "${SWIFT_ARGS[@]}")
+echo "$OUTPUT" | grep -v "^MODE:" | grep -v "^FILE:"
+
+# Check if we should apply
+if [ "${usage_generate_only:-}" = "true" ]; then
+    gum style --foreground 46 "✅ Wallpapers generated (not applied)"
+    exit 0
+fi
+
+# Extract file paths from output
+FILES=()
+while IFS= read -r line; do
+    if [[ "$line" == FILE:* ]]; then
+        FILES+=("${line#FILE:}")
+    fi
+done <<< "$OUTPUT"
+
+if [ ${#FILES[@]} -eq 0 ]; then
+    gum style --foreground 196 "❌ No wallpapers to apply"
+    exit 1
+fi
+
+gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
+
+# Apply wallpapers to spaces
+# Strategy: Start from space 1, set each wallpaper, then move to next space
+CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
+
+# First, switch to space 1
+for ((i = CURRENT_SPACE; i > 1; i--)); do
+    osascript -e 'tell application "System Events" to key code 123 using control down' # Ctrl+Left
+    sleep 0.3
+done
+
+# Now apply each wallpaper
+for i in "${!FILES[@]}"; do
+    FILE="${FILES[$i]}"
+    FULL_PATH="$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")"
+
+    gum spin --spinner dot --title "Setting wallpaper $((i+1))/${#FILES[@]}..." -- \
+        osascript -e "tell application \"System Events\" to set picture of current desktop to \"$FULL_PATH\""
+
+    # Move to next space if not the last wallpaper
+    if [ $i -lt $((${#FILES[@]} - 1)) ]; then
+        osascript -e 'tell application "System Events" to key code 124 using control down' # Ctrl+Right
+        sleep 0.3
+    fi
+done
+
+gum style --foreground 46 "✅ All wallpapers applied!"

@@ -31,8 +31,14 @@ if gum confirm "Add a description?"; then
     fi
 fi
 
+# Detect current screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
 # Select resolution
 RESOLUTION=$(gum choose --header "📐 Select resolution:" \
+    "auto (${SCREEN_W}x${SCREEN_H} - your screen) (Recommended)" \
     "1080p (1920x1080)" \
     "1440p (2560x1440)" \
     "4k (3840x2160)" \
@@ -41,8 +47,13 @@ RESOLUTION=$(gum choose --header "📐 Select resolution:" \
     "imac-24 (4480x2520)" \
     "studio-display (5120x2880)")
 
-# Extract just the resolution key
-RES_KEY=$(echo "$RESOLUTION" | cut -d' ' -f1)
+# Extract resolution - handle auto-detect
+if [[ "$RESOLUTION" == auto* ]]; then
+    RES_ARGS="--width $SCREEN_W --height $SCREEN_H"
+else
+    RES_KEY=$(echo "$RESOLUTION" | cut -d' ' -f1)
+    RES_ARGS="-r $RES_KEY"
+fi
 
 # Select colors
 gum style --foreground 244 "🎨 Color scheme"
@@ -79,7 +90,7 @@ fi
 # Build and run Swift generator
 gum spin --spinner dot --title "Generating wallpaper..." -- \
     swift src/generate.swift "$NAME" \
-        -r "$RES_KEY" \
+        $RES_ARGS \
         --bg-color "$BG_COLOR" \
         --text-color "$TEXT_COLOR" \
         $DESC_ARG ${DESCRIPTION:+"$DESCRIPTION"}
@@ -91,7 +102,7 @@ ls -la output/
 """
 
 [tasks.quick]
-description = "Quick generate with just a name"
+description = "Quick generate with just a name (auto-detects screen resolution)"
 run = """
 #!/usr/bin/env bash
 set -e
@@ -103,8 +114,13 @@ if [ -z "$NAME" ]; then
     exit 1
 fi
 
-gum spin --spinner dot --title "Generating..." -- \
-    swift src/generate.swift "$NAME"
+# Auto-detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+gum spin --spinner dot --title "Generating at ${SCREEN_W}x${SCREEN_H}..." -- \
+    swift src/generate.swift "$NAME" --width "$SCREEN_W" --height "$SCREEN_H"
 
 gum style --foreground 46 "✅ Done! Saved to output/"
 """
@@ -144,3 +160,152 @@ run = "open output/"
 [tasks.help]
 description = "Show generator CLI help"
 run = "swift src/generate.swift --help"
+
+[tasks.set]
+description = "Set wallpaper for current desktop space"
+run = """
+#!/usr/bin/env bash
+set -e
+
+# Check for generated wallpapers
+if [ ! -d output ] || [ -z "$(ls output/*.png 2>/dev/null)" ]; then
+    gum style --foreground 196 "❌ No wallpapers found. Run 'mise run generate' first."
+    exit 1
+fi
+
+gum style \
+    --foreground 212 --border-foreground 212 --border double \
+    --align center --width 50 --margin "1 2" --padding "1 2" \
+    '🖥️ Set Desktop Wallpaper'
+
+# Show current space
+SPACE_INFO=$(swift src/current-space.swift 2>/dev/null)
+if [ -n "$SPACE_INFO" ]; then
+    CURRENT=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+    TOTAL=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+    gum style --foreground 46 "📍 You are on Desktop $CURRENT of $TOTAL"
+fi
+echo ""
+
+# Let user pick a wallpaper
+WALLPAPER=$(ls output/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
+
+if [ -z "$WALLPAPER" ]; then
+    gum style --foreground 196 "❌ No wallpaper selected"
+    exit 1
+fi
+
+# Get absolute path
+WALLPAPER_PATH="$(cd output && pwd)/$WALLPAPER"
+
+# Set wallpaper for current desktop using osascript
+osascript -e "tell application \\"System Events\\" to set picture of current desktop to \\"$WALLPAPER_PATH\\""
+
+gum style --foreground 46 "✅ Wallpaper set: $WALLPAPER"
+"""
+
+[tasks."set:all"]
+description = "Set wallpaper for all spaces (loops through each)"
+run = """
+#!/usr/bin/env bash
+set -e
+
+if [ ! -d output ] || [ -z "$(ls output/*.png 2>/dev/null)" ]; then
+    gum style --foreground 196 "❌ No wallpapers found. Run 'mise run generate' first."
+    exit 1
+fi
+
+gum style \
+    --foreground 212 --border-foreground 212 --border double \
+    --align center --width 50 --margin "1 2" --padding "1 2" \
+    '🖥️ Set Wallpaper (All Spaces)'
+
+gum style --foreground 244 "⚠️  macOS limitation: We need to switch to each space to set its wallpaper."
+gum style --foreground 244 "This will cycle through your spaces using Ctrl+Arrow keys."
+echo ""
+
+# Auto-detect current space and total spaces
+SPACE_INFO=$(swift src/current-space.swift 2>/dev/null)
+if [ -n "$SPACE_INFO" ]; then
+    CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+    NUM_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+    gum style --foreground 46 "✓ Detected: Desktop $CURRENT_SPACE of $NUM_SPACES"
+else
+    gum style --foreground 214 "⚠️  Could not auto-detect spaces, please enter manually:"
+    NUM_SPACES=$(gum input --placeholder "5" --prompt "How many spaces do you have? ")
+    NUM_SPACES=${NUM_SPACES:-5}
+    CURRENT_SPACE=$(gum input --placeholder "1" --prompt "Which desktop are you on now? ")
+    CURRENT_SPACE=${CURRENT_SPACE:-1}
+fi
+echo ""
+
+WALLPAPER=$(ls output/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
+
+if [ -z "$WALLPAPER" ]; then
+    gum style --foreground 196 "❌ No wallpaper selected"
+    exit 1
+fi
+
+WALLPAPER_PATH="$(cd output && pwd)/$WALLPAPER"
+
+gum style --foreground 214 "🔄 Starting in 3 seconds... Don't touch anything!"
+sleep 3
+
+# Go to Desktop 1 (only the necessary number of times)
+STEPS_LEFT=$((CURRENT_SPACE - 1))
+if [ "$STEPS_LEFT" -gt 0 ]; then
+    gum style --foreground 244 "Navigating to Desktop 1..."
+    for i in $(seq 1 "$STEPS_LEFT"); do
+        osascript -e 'tell application "System Events" to key code 123 using control down'
+        sleep 0.3
+    done
+    sleep 0.5
+fi
+
+# Loop through spaces, setting wallpaper on each
+for i in $(seq 1 "$NUM_SPACES"); do
+    # Set wallpaper for current space
+    osascript -e "tell application \\"System Events\\" to set picture of current desktop to \\"$WALLPAPER_PATH\\""
+
+    # Move to next space (Ctrl+Right)
+    if [ "$i" -lt "$NUM_SPACES" ]; then
+        osascript -e 'tell application "System Events" to key code 124 using control down'
+        sleep 0.5
+    fi
+done
+
+# Return to original desktop
+STEPS_TO_RETURN=$((NUM_SPACES - CURRENT_SPACE))
+if [ "$STEPS_TO_RETURN" -gt 0 ]; then
+    gum style --foreground 244 "Returning to Desktop $CURRENT_SPACE..."
+    for i in $(seq 1 "$STEPS_TO_RETURN"); do
+        osascript -e 'tell application "System Events" to key code 123 using control down'
+        sleep 0.3
+    done
+fi
+
+gum style --foreground 46 "✅ Wallpaper set on $NUM_SPACES spaces: $WALLPAPER"
+"""
+
+[tasks.resolution]
+description = "Show your screen resolution"
+run = """
+#!/usr/bin/env bash
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+gum style --foreground 212 "🖥️ Your screen resolution: $SCREEN_RES"
+gum style --foreground 244 "Use 'mise run quick' to auto-generate at this size"
+"""
+
+[tasks.space]
+description = "Show current desktop space"
+run = """
+#!/usr/bin/env bash
+SPACE_INFO=$(swift src/current-space.swift 2>/dev/null)
+if [ -n "$SPACE_INFO" ]; then
+    CURRENT=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+    TOTAL=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+    gum style --foreground 212 "📍 Desktop $CURRENT of $TOTAL"
+else
+    gum style --foreground 196 "❌ Could not detect current space"
+fi
+"""

@@ -1,2 +1,7 @@
 # Mise configuration for wallpaper generator
 # Tasks are auto-discovered from .mise/tasks/
+
+[tools]
+gum = "latest"
+
+# Note: Swift is built-in on macOS, no need to manage it

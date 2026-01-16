@@ -12,7 +12,8 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 
 ## Requirements
 
-- macOS (uses native Swift and Core Graphics)
+- macOS 13+ (uses native Swift and Core Graphics)
+- Swift 5.9+ (included with Xcode Command Line Tools)
 - [mise](https://mise.jdx.dev/) for task running
 
 ## Quick Start

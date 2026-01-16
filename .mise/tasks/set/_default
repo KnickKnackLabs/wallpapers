@@ -2,8 +2,10 @@
 #MISE description="Set wallpaper for current desktop space"
 set -e
 
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
 # Check for generated wallpapers
-if [ ! -d output ] || [ -z "$(ls output/*.png 2>/dev/null)" ]; then
+if [ ! -d "$OUTPUT_DIR" ] || [ -z "$(ls "$OUTPUT_DIR"/*.png 2>/dev/null)" ]; then
     gum style --foreground 196 "❌ No wallpapers found. Run 'mise run generate' first."
     exit 1
 fi
@@ -23,7 +25,7 @@ fi
 echo ""
 
 # Let user pick a wallpaper
-WALLPAPER=$(ls output/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
+WALLPAPER=$(ls "$OUTPUT_DIR"/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
 
 if [ -z "$WALLPAPER" ]; then
     gum style --foreground 196 "❌ No wallpaper selected"
@@ -31,7 +33,7 @@ if [ -z "$WALLPAPER" ]; then
 fi
 
 # Get absolute path
-WALLPAPER_PATH="$(cd output && pwd)/$WALLPAPER"
+WALLPAPER_PATH="$OUTPUT_DIR/$WALLPAPER"
 
 # Set wallpaper for current desktop using osascript
 osascript -e "tell application \"System Events\" to set picture of current desktop to \"$WALLPAPER_PATH\""

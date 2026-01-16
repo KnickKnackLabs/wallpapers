@@ -3,6 +3,8 @@
 #MISE alias="default"
 set -e
 
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
 NAME=$(gum input --placeholder "Workspace name" --prompt "📝 Quick generate: ")
 
 if [ -z "$NAME" ]; then
@@ -18,11 +20,10 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 gum spin --spinner dot --title "Generating at ${SCREEN_W}x${SCREEN_H}..." -- \
     swift src/generate.swift "$NAME" --width "$SCREEN_W" --height "$SCREEN_H"
 
-gum style --foreground 46 "✅ Generated! Saved to output/"
+gum style --foreground 46 "✅ Generated! Saved to $OUTPUT_DIR"
 
 # Get the most recently created wallpaper (the one we just generated)
-WALLPAPER_PATH="$(ls -t output/*.png | head -1)"
-WALLPAPER_PATH="$(cd "$(dirname "$WALLPAPER_PATH")" && pwd)/$(basename "$WALLPAPER_PATH")"
+WALLPAPER_PATH="$(ls -t "$OUTPUT_DIR"/*.png | head -1)"
 
 # Set wallpaper for current desktop
 gum spin --spinner dot --title "Setting wallpaper..." -- \

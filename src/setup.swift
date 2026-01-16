@@ -10,6 +10,7 @@ struct Config: Codable {
 
 struct Workspace: Codable {
     let name: String
+    let id: String?  // Optional custom ID; defaults to slugified name
     let description: String?
     let bgColor: String?
     let textColor: String?
@@ -103,6 +104,12 @@ func main() -> Int32 {
         let bgColor = workspace.bgColor ?? config.defaults?.bgColor ?? "#000000"
         let textColor = workspace.textColor ?? config.defaults?.textColor ?? "#ffffff"
         genArgs += ["--bg-color", bgColor, "--text-color", textColor]
+
+        // ID and index for filename
+        if let id = workspace.id {
+            genArgs += ["--id", id]
+        }
+        genArgs += ["--index", String(index + 1)]  // 1-based index
 
         // Resolution: CLI args > workspace > defaults
         if let w = customWidth, let h = customHeight {

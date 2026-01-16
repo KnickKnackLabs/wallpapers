@@ -40,7 +40,7 @@ Direct Swift invocation: `swift src/generate.swift "Name" [options]`
 - Supports resolution presets (1080p, 1440p, 4k, macbook-14, macbook-16, imac-24, studio-display) and custom dimensions
 - Background/text color customization via hex colors
 - RTL/LTR text positioning (Hebrew, Arabic auto-detected)
-- Outputs to `output/{name}-{width}x{height}.png`
+- Outputs to `~/.local/share/wallpapers/{id}.{index}.png`
 
 **`src/current-space.swift`** - Detects current macOS desktop/space number
 - Uses private CGS (Core Graphics Server) APIs: `CGSCopyManagedDisplaySpaces()`, `CGSGetActiveSpace()`, `CGSMainConnectionID()`
@@ -62,8 +62,26 @@ Direct Swift invocation: `swift src/generate.swift "Name" [options]`
 1. User runs task (e.g., `mise run quick`)
 2. Bash task collects input via gum prompts or CLI args
 3. Task invokes `swift src/generate.swift` with options
-4. Swift generates PNG to `output/` directory
+4. Swift generates PNG to `~/.local/share/wallpapers/`
 5. Task optionally sets wallpaper via osascript
+
+### Config File
+
+Location: `~/.config/wallpapers/config.json`
+
+```json
+{
+  "workspaces": [
+    { "name": "Personal", "bgColor": "#2d3436" },
+    { "name": "Skydiving 🪂", "id": "skydiving", "bgColor": "#0f3460" }
+  ],
+  "defaults": { "bgColor": "#000000", "textColor": "#ffffff" }
+}
+```
+
+**Workspace ID:** Each workspace gets a filename-safe ID. By default, this is derived from the name (slugified: lowercase, spaces→hyphens, alphanumeric only). Use the optional `id` field to override, especially for names with emojis or special characters.
+
+**Filename format:** `{id}.{index}.png` (e.g., `personal.1.png`, `skydiving.2.png`)
 
 ## Resolution Presets
 

@@ -2,7 +2,9 @@
 #MISE description="Set wallpaper for all spaces (loops through each)"
 set -e
 
-if [ ! -d output ] || [ -z "$(ls output/*.png 2>/dev/null)" ]; then
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
+if [ ! -d "$OUTPUT_DIR" ] || [ -z "$(ls "$OUTPUT_DIR"/*.png 2>/dev/null)" ]; then
     gum style --foreground 196 "❌ No wallpapers found. Run 'mise run generate' first."
     exit 1
 fi
@@ -31,14 +33,14 @@ else
 fi
 echo ""
 
-WALLPAPER=$(ls output/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
+WALLPAPER=$(ls "$OUTPUT_DIR"/*.png | xargs -n1 basename | gum choose --header "Select wallpaper:")
 
 if [ -z "$WALLPAPER" ]; then
     gum style --foreground 196 "❌ No wallpaper selected"
     exit 1
 fi
 
-WALLPAPER_PATH="$(cd output && pwd)/$WALLPAPER"
+WALLPAPER_PATH="$OUTPUT_DIR/$WALLPAPER"
 
 gum style --foreground 214 "🔄 Starting in 3 seconds... Don't touch anything!"
 sleep 3

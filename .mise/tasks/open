@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
-#MISE description="Open the output directory in Finder"
-mkdir -p output
-open output/
+#MISE description="Open the wallpapers directory in Finder"
+
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
+mkdir -p "$OUTPUT_DIR"
+open "$OUTPUT_DIR"

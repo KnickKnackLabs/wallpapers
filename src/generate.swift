@@ -72,6 +72,8 @@ func generateWallpaper(
     height: Int,
     bgColor: String,
     textColor: String,
+    workspaceId: String?,
+    spaceIndex: Int?,
     outputDir: String
 ) -> String? {
 
@@ -178,12 +180,19 @@ func generateWallpaper(
     let fileManager = FileManager.default
     try? fileManager.createDirectory(atPath: outputDir, withIntermediateDirectories: true)
 
-    // Generate filename
-    let safeName = name
+    // Generate filename: {id}.{index}.png
+    // ID defaults to slugified name if not provided
+    let slug = workspaceId ?? name
         .lowercased()
         .replacingOccurrences(of: " ", with: "-")
         .filter { $0.isLetter || $0.isNumber || $0 == "-" }
-    let filename = "\(safeName)-\(width)x\(height).png"
+
+    let filename: String
+    if let index = spaceIndex {
+        filename = "\(slug).\(index).png"
+    } else {
+        filename = "\(slug).png"
+    }
     let outputPath = (outputDir as NSString).appendingPathComponent(filename)
     let outputURL = URL(fileURLWithPath: outputPath)
 
@@ -223,7 +232,9 @@ func printUsage() {
       --height <pixels>           Custom height (overrides preset)
       --bg-color <hex>            Background color (default: #000000)
       --text-color <hex>          Text color (default: #ffffff)
-      -o, --output-dir <path>     Output directory (default: output)
+      --id <slug>                 Workspace ID for filename (default: derived from name)
+      --index <n>                 Space index for filename (e.g., 1, 2, 3)
+      -o, --output-dir <path>     Output directory (default: ~/.local/share/wallpapers)
       -h, --help                  Show this help message
     """
     print(usage)
@@ -240,7 +251,9 @@ func main() -> Int32 {
     var customHeight: Int?
     var bgColor = "#000000"
     var textColor = "#ffffff"
-    var outputDir = "output"
+    var workspaceId: String?
+    var spaceIndex: Int?
+    var outputDir = NSString(string: "~/.local/share/wallpapers").expandingTildeInPath
 
     // Parse arguments
     var i = 0
@@ -275,6 +288,14 @@ func main() -> Int32 {
         case "--text-color":
             i += 1
             if i < args.count { textColor = args[i] }
+
+        case "--id":
+            i += 1
+            if i < args.count { workspaceId = args[i] }
+
+        case "--index":
+            i += 1
+            if i < args.count { spaceIndex = Int(args[i]) }
 
         case "-o", "--output-dir":
             i += 1
@@ -319,6 +340,8 @@ func main() -> Int32 {
         height: height,
         bgColor: bgColor,
         textColor: textColor,
+        workspaceId: workspaceId,
+        spaceIndex: spaceIndex,
         outputDir: outputDir
     ) {
         print("Generated: \(outputPath)")

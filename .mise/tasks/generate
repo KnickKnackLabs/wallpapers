@@ -2,6 +2,8 @@
 #MISE description="Generate a wallpaper interactively"
 set -e
 
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
 # Styled header
 gum style \
     --foreground 212 --border-foreground 212 --border double \
@@ -89,7 +91,7 @@ gum spin --spinner dot --title "Generating wallpaper..." -- \
         --text-color "$TEXT_COLOR" \
         $DESC_ARG ${DESCRIPTION:+"$DESCRIPTION"}
 
-gum style --foreground 46 "✅ Wallpaper generated! Check the output/ directory."
+gum style --foreground 46 "✅ Wallpaper generated! Saved to $OUTPUT_DIR"
 
 # Show the generated files
-ls -la output/
+ls -la "$OUTPUT_DIR"

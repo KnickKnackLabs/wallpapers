@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Quick generate with just a name (auto-detects screen resolution)"
+#MISE alias="default"
 set -e
 
 NAME=$(gum input --placeholder "Workspace name" --prompt "📝 Quick generate: ")

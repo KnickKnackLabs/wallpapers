@@ -1,0 +1,4 @@
+[tools]
+gum = "latest"
+
+# Swift is built-in on macOS, no need to manage it

@@ -1,0 +1,17 @@
+# Generated wallpapers (user-specific)
+output/*.png
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# mise
+.mise.local.toml
+
+# Swift build artifacts (if we ever compile)
+.build/

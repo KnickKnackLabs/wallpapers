@@ -19,18 +19,23 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 ## Quick Start
 
 ```bash
+# Clone the repo
+git clone https://gecgithub01.walmart.com/vn5a6e7/wallpapers.git
+cd wallpapers
+
 # Install mise tools (just gum)
 mise install
 
-# Generate a wallpaper (auto-detects your screen resolution)
-mise run quick
+# Install the 'wp' command globally
+mise run install
 
-# Set it as your current desktop's wallpaper
-mise run set
-
-# Or set the same wallpaper on all desktops
-mise run set:all
+# Now use from anywhere!
+wp quick       # Generate a wallpaper
+wp set         # Set it as your current desktop's wallpaper
+wp set:all     # Or set the same wallpaper on all desktops
 ```
+
+> **Note:** Requires `~/.local/bin` in your PATH. The installer will warn you if it's missing.
 
 ## Tasks
 
@@ -60,6 +65,8 @@ mise run set:all
 |------|-------------|
 | `mise run clean` | Delete all generated wallpapers |
 | `mise run open` | Open output folder in Finder |
+| `mise run install` | Install `wp` command to ~/.local/bin |
+| `mise run uninstall` | Remove `wp` command |
 
 ## CLI Usage
 

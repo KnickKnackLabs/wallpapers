@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#MISE description="Install 'wp' command to ~/.local/bin/"
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+BIN_DIR="$HOME/.local/bin"
+BIN_FILE="$BIN_DIR/wp"
+
+gum style --bold --foreground 141 "🎨 Installing wp command..."
+echo ""
+
+# Create ~/.local/bin if it doesn't exist
+mkdir -p "$BIN_DIR"
+
+# Write the wrapper script
+cat > "$BIN_FILE" << EOF
+#!/usr/bin/env bash
+# Wallpaper generator CLI - https://gecgithub01.walmart.com/vn5a6e7/wallpapers
+exec mise run -C "$SCRIPT_DIR" "\$@"
+EOF
+
+chmod +x "$BIN_FILE"
+
+gum style --foreground 46 "✅ Installed to $BIN_FILE"
+echo ""
+
+# Check if ~/.local/bin is in PATH
+if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+    gum style --foreground 214 "⚠️  ~/.local/bin is not in your PATH"
+    echo ""
+    gum style --foreground 245 "Add this to your shell config (~/.zshrc, ~/.bashrc, etc.):"
+    echo ""
+    gum style --foreground 117 '   export PATH="$HOME/.local/bin:$PATH"'
+    echo ""
+else
+    gum style --foreground 46 --bold "🎉 Ready to use!"
+    echo ""
+    gum style --foreground 245 "Commands:"
+    gum style --foreground 117 "   wp quick          # Quick generate"
+    gum style --foreground 117 "   wp set            # Set wallpaper"
+    gum style --foreground 117 "   wp generate       # Full options"
+fi

@@ -22,6 +22,27 @@ let resolutions: [String: (width: Int, height: Int)] = [
     "studio-display": (5120, 2880),
 ]
 
+// MARK: - Text Direction
+
+/// Detects if text contains RTL characters (Hebrew, Arabic, etc.)
+func isRTL(_ text: String) -> Bool {
+    for scalar in text.unicodeScalars {
+        // Hebrew: U+0590 to U+05FF
+        // Arabic: U+0600 to U+06FF, U+0750 to U+077F, U+08A0 to U+08FF
+        // Arabic Extended: U+FB50 to U+FDFF, U+FE70 to U+FEFF
+        let value = scalar.value
+        if (0x0590...0x05FF).contains(value) ||  // Hebrew
+           (0x0600...0x06FF).contains(value) ||  // Arabic
+           (0x0750...0x077F).contains(value) ||  // Arabic Supplement
+           (0x08A0...0x08FF).contains(value) ||  // Arabic Extended-A
+           (0xFB50...0xFDFF).contains(value) ||  // Arabic Presentation Forms-A
+           (0xFE70...0xFEFF).contains(value) {   // Arabic Presentation Forms-B
+            return true
+        }
+    }
+    return false
+}
+
 // MARK: - Color Helpers
 
 func parseHexColor(_ hex: String) -> (r: CGFloat, g: CGFloat, b: CGFloat)? {
@@ -113,25 +134,36 @@ func generateWallpaper(
         descBounds = CTLineGetBoundsWithOptions(descLine!, [])
     }
 
-    // Calculate positions (centered)
-    let gap: CGFloat = 20
-    let totalHeight = nameBounds.height + (descLine != nil ? descBounds.height + gap : 0)
+    // Calculate positions (bottom-left for LTR, bottom-right for RTL)
+    let margin: CGFloat = CGFloat(max(40, height / 25))  // ~4% of height
+    let gap: CGFloat = 10
+    let rtl = isRTL(name)
 
-    let nameX = (CGFloat(width) - nameBounds.width) / 2
-    var nameY = (CGFloat(height) - totalHeight) / 2 + nameBounds.height
+    // Description goes above the name
+    // In CG coordinates, Y=0 is at bottom, so we position from bottom up
+    let descY = margin
+    let nameY = descLine != nil ? descY + descBounds.height + gap : margin
 
-    if descLine != nil {
-        nameY = (CGFloat(height) + totalHeight) / 2 - descBounds.height - gap
+    // X position: left margin for LTR, right margin for RTL
+    let nameX: CGFloat
+    let descX: CGFloat
+
+    if rtl {
+        // Right-align for RTL
+        nameX = CGFloat(width) - margin - nameBounds.width
+        descX = CGFloat(width) - margin - descBounds.width
+    } else {
+        // Left-align for LTR
+        nameX = margin
+        descX = margin
     }
 
     // Draw name
-    context.textPosition = CGPoint(x: nameX, y: nameY - nameBounds.height)
+    context.textPosition = CGPoint(x: nameX, y: nameY)
     CTLineDraw(nameLine, context)
 
-    // Draw description if present
+    // Draw description if present (below name visually, which means lower Y in CG coords)
     if let descLine = descLine {
-        let descX = (CGFloat(width) - descBounds.width) / 2
-        let descY = nameY - nameBounds.height - gap - descBounds.height
         context.textPosition = CGPoint(x: descX, y: descY)
         CTLineDraw(descLine, context)
     }

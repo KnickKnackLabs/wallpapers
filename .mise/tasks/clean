@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Remove all generated wallpapers"
+if gum confirm "Delete all generated wallpapers?"; then
+    rm -rf output/*.png
+    gum style --foreground 46 "✅ Cleaned output directory"
+else
+    gum style --foreground 244 "Cancelled"
+fi

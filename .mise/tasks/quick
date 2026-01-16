@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#MISE description="Quick generate with just a name (auto-detects screen resolution)"
+set -e
+
+NAME=$(gum input --placeholder "Workspace name" --prompt "📝 Quick generate: ")
+
+if [ -z "$NAME" ]; then
+    gum style --foreground 196 "❌ Name is required"
+    exit 1
+fi
+
+# Auto-detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+gum spin --spinner dot --title "Generating at ${SCREEN_W}x${SCREEN_H}..." -- \
+    swift src/generate.swift "$NAME" --width "$SCREEN_W" --height "$SCREEN_H"
+
+gum style --foreground 46 "✅ Done! Saved to output/"

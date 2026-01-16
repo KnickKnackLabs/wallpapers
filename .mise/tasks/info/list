@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="List generated wallpapers"
+if [ -d output ] && [ "$(ls -A output 2>/dev/null)" ]; then
+    gum style --foreground 212 --bold "📁 Generated Wallpapers:"
+    ls -lh output/*.png 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+else
+    gum style --foreground 244 "No wallpapers generated yet. Run 'mise run generate' to create one."
+fi

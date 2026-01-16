@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+#MISE description="Generate a wallpaper interactively"
+set -e
+
+# Styled header
+gum style \
+    --foreground 212 --border-foreground 212 --border double \
+    --align center --width 50 --margin "1 2" --padding "1 2" \
+    '🖼️ Wallpaper Generator'
+
+# Get workspace name
+NAME=$(gum input --placeholder "Workspace name (e.g., 'Code', 'Design')" --prompt "📝 Name: ")
+
+if [ -z "$NAME" ]; then
+    gum style --foreground 196 "❌ Name is required"
+    exit 1
+fi
+
+# Ask for optional description
+DESC_ARG=""
+if gum confirm "Add a description?"; then
+    DESCRIPTION=$(gum input --placeholder "Brief description" --prompt "📋 Description: ")
+    if [ -n "$DESCRIPTION" ]; then
+        DESC_ARG="--description"
+    fi
+fi
+
+# Detect current screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+# Select resolution
+RESOLUTION=$(gum choose --header "📐 Select resolution:" \
+    "auto (${SCREEN_W}x${SCREEN_H} - your screen) (Recommended)" \
+    "1080p (1920x1080)" \
+    "1440p (2560x1440)" \
+    "4k (3840x2160)" \
+    "macbook-14 (3024x1964)" \
+    "macbook-16 (3456x2234)" \
+    "imac-24 (4480x2520)" \
+    "studio-display (5120x2880)")
+
+# Extract resolution - handle auto-detect
+if [[ "$RESOLUTION" == auto* ]]; then
+    RES_ARGS="--width $SCREEN_W --height $SCREEN_H"
+else
+    RES_KEY=$(echo "$RESOLUTION" | cut -d' ' -f1)
+    RES_ARGS="-r $RES_KEY"
+fi
+
+# Select colors
+gum style --foreground 244 "🎨 Color scheme"
+BG_COLOR=$(gum choose --header "Background:" \
+    "#000000 (Black)" \
+    "#1a1a2e (Dark Navy)" \
+    "#16213e (Deep Blue)" \
+    "#0f3460 (Ocean)" \
+    "#2d3436 (Charcoal)" \
+    "#ffffff (White)" \
+    "custom")
+
+if [ "$BG_COLOR" = "custom" ]; then
+    BG_COLOR=$(gum input --placeholder "#000000" --prompt "Custom hex: ")
+else
+    BG_COLOR=$(echo "$BG_COLOR" | cut -d' ' -f1)
+fi
+
+TEXT_COLOR=$(gum choose --header "Text color:" \
+    "#ffffff (White)" \
+    "#e94560 (Red)" \
+    "#00d9ff (Cyan)" \
+    "#00ff88 (Green)" \
+    "#ffd93d (Yellow)" \
+    "#c9b1ff (Lavender)" \
+    "custom")
+
+if [ "$TEXT_COLOR" = "custom" ]; then
+    TEXT_COLOR=$(gum input --placeholder "#ffffff" --prompt "Custom hex: ")
+else
+    TEXT_COLOR=$(echo "$TEXT_COLOR" | cut -d' ' -f1)
+fi
+
+# Build and run Swift generator
+gum spin --spinner dot --title "Generating wallpaper..." -- \
+    swift src/generate.swift "$NAME" \
+        $RES_ARGS \
+        --bg-color "$BG_COLOR" \
+        --text-color "$TEXT_COLOR" \
+        $DESC_ARG ${DESCRIPTION:+"$DESCRIPTION"}
+
+gum style --foreground 46 "✅ Wallpaper generated! Check the output/ directory."
+
+# Show the generated files
+ls -la output/

@@ -33,19 +33,32 @@ mise run set:all
 
 ## Tasks
 
+### Generate
 | Task | Description |
 |------|-------------|
 | `mise run generate` | Interactive wallpaper generator with full options |
 | `mise run quick` | Quick generate - just enter a name |
-| `mise run set` | Set wallpaper for current desktop |
-| `mise run set:all` | Set wallpaper for all desktops (cycles through spaces) |
-| `mise run list` | List generated wallpapers |
-| `mise run clean` | Delete all generated wallpapers |
-| `mise run open` | Open output folder in Finder |
-| `mise run resolution` | Show your screen resolution |
-| `mise run space` | Show current desktop number |
 | `mise run cli` | Direct CLI access to the generator |
 | `mise run help` | Show generator CLI options |
+
+### Set Wallpaper
+| Task | Description |
+|------|-------------|
+| `mise run set` | Set wallpaper for current desktop |
+| `mise run set:all` | Set wallpaper for all desktops (cycles through spaces) |
+
+### Info
+| Task | Description |
+|------|-------------|
+| `mise run info:list` | List generated wallpapers |
+| `mise run info:resolution` | Show your screen resolution |
+| `mise run info:space` | Show current desktop number |
+
+### Utilities
+| Task | Description |
+|------|-------------|
+| `mise run clean` | Delete all generated wallpapers |
+| `mise run open` | Open output folder in Finder |
 
 ## CLI Usage
 
@@ -82,7 +95,7 @@ swift src/generate.swift "Work" -r 4k
 
 1. **Generator** (`src/generate.swift`) - Creates PNG wallpapers using Core Graphics
 2. **Space Detection** (`src/current-space.swift`) - Uses private macOS APIs to detect current desktop
-3. **Tasks** (`mise.toml`) - Wraps everything in nice gum-powered CLI experiences
+3. **Tasks** (`.mise/tasks/`) - File-based mise tasks with gum-powered CLI experiences
 
 ### Text Positioning
 

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="Show current desktop space"
+SPACE_INFO=$(swift src/current-space.swift 2>/dev/null)
+if [ -n "$SPACE_INFO" ]; then
+    CURRENT=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+    TOTAL=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+    gum style --foreground 212 "📍 Desktop $CURRENT of $TOTAL"
+else
+    gum style --foreground 196 "❌ Could not detect current space"
+fi

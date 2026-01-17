@@ -14,24 +14,23 @@ All commands can be run via `mise run <task>` or globally via `wp <task>` (after
 
 | Command | Purpose |
 |---------|---------|
-| `mise run quick` | Default task - quick generate with auto-detected resolution, auto-sets wallpaper |
-| `mise run generate` | Full interactive generator (colors, resolution, description) |
-| `mise run cli "Name" [options]` | Direct CLI without interactive prompts |
-| `mise run apply` | Show picker to apply wallpaper to current or all spaces |
+| `mise run apply` | Default task - show picker to apply wallpaper to current or all spaces |
 | `mise run apply <name>` | Generate and apply wallpaper for a specific workspace |
 | `mise run apply --all` | Generate and apply wallpapers to all spaces |
 | `mise run goto` | Show picker to switch workspaces |
 | `mise run goto <name>` | Switch to a workspace by name |
 | `mise run goto -` | Go back to previous workspace (like `cd -`) |
+| `mise run quick` | Quick generate with auto-detected resolution, auto-sets wallpaper |
+| `mise run generate` | Full interactive generator (colors, resolution, description) |
+| `mise run cli "Name" [options]` | Direct CLI without interactive prompts |
 | `mise run config:init` | Create starter config at ~/.config/wallpapers/config.json |
 | `mise run config:edit` | Open config in $EDITOR |
-| `mise run set` | Set wallpaper for current desktop |
-| `mise run set:all` | Set wallpaper across all desktops |
 | `mise run info:list` | List generated wallpapers |
 | `mise run info:space` | Show current desktop number (e.g., "3/5") |
 | `mise run info:resolution` | Show screen resolution |
 | `mise run clean` | Delete all generated wallpapers |
-| `mise run install` | Install global `wp` command to ~/.local/bin |
+| `mise run tutorial` | Interactive tutorial to learn the tool |
+| `mise run install` | Show how to set up the global `wp` alias |
 
 Direct Swift invocation: `swift src/generate.swift "Name" [options]`
 
@@ -100,4 +99,4 @@ Location: `~/.config/wallpapers/config.json`
 
 - No automated test suite - testing is manual through CLI
 - macOS-only (AppKit, Core Graphics, osascript)
-- Global `wp` command requires ~/.local/bin in PATH
+- Global `wp` command via shell alias: `alias wp='mise -C /path/to/wallpapers run'`

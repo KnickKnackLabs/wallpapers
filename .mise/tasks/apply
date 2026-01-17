@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Apply wallpapers from config (all or select one)"
+#MISE alias="default"
 #USAGE arg "[name]" help="Workspace name/id to apply (optional - shows picker if omitted)"
 #USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
 #USAGE flag "--all" help="Apply to all spaces without prompting"

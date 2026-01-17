@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 #MISE description="Quick generate with just a name (auto-detects screen resolution)"
-#MISE alias="default"
 set -e
 
 OUTPUT_DIR="$HOME/.local/share/wallpapers"

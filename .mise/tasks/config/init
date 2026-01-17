@@ -22,18 +22,19 @@ cat > "$CONFIG_FILE" << 'EOF'
   "workspaces": [
     {
       "name": "Personal",
+      "description": "Life admin & side projects",
       "bgColor": "#2d3436"
     },
     {
       "name": "Work",
-      "description": "Main workspace",
+      "description": "Primary workspace",
       "bgColor": "#0984e3"
     },
     {
       "name": "Skydiving 🪂",
       "id": "skydiving",
-      "description": "DZ planning",
-      "bgColor": "#0f3460"
+      "description": "DZ planning & logbook",
+      "bgColor": "#6c5ce7"
     }
   ],
   "defaults": {

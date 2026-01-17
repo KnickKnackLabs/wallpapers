@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+#MISE description="Apply wallpapers from config (all or select one)"
+#USAGE arg "[name]" help="Workspace name/id to apply (optional - shows picker if omitted)"
+#USAGE flag "--all" help="Apply to all spaces without prompting"
+set -e
+
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+CONFIG_FILE="$HOME/.config/wallpapers/config.json"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    gum style --foreground 196 "❌ Config not found. Run: mise run config:init"
+    exit 1
+fi
+
+# Auto-detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+# If --all flag, generate all and apply to all spaces
+if [ "${usage_all:-}" = "true" ]; then
+    # Generate and get file list
+    OUTPUT=$(swift src/setup.swift --width "$SCREEN_W" --height "$SCREEN_H")
+    FILES=()
+    while IFS= read -r line; do
+        if [[ "$line" == FILE:* ]]; then
+            FILES+=("${line#FILE:}")
+        elif [[ "$line" != MODE:* ]]; then
+            echo "$line"
+        fi
+    done <<< "$OUTPUT"
+
+    if [ ${#FILES[@]} -eq 0 ]; then
+        gum style --foreground 196 "❌ No wallpapers to apply"
+        exit 1
+    fi
+
+    gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
+
+    CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
+
+    # Navigate to space 1
+    for ((i = CURRENT_SPACE; i > 1; i--)); do
+        osascript -e 'tell application "System Events" to key code 123 using control down'
+        sleep 0.5
+    done
+    sleep 0.5
+
+    # Apply each wallpaper
+    for i in "${!FILES[@]}"; do
+        FILE="${FILES[$i]}"
+        echo "Setting wallpaper $((i+1))/${#FILES[@]}: $(basename "$FILE")"
+        osascript -e "tell application \"System Events\" to set picture of current desktop to \"$FILE\""
+        sleep 0.5
+
+        if [ $i -lt $((${#FILES[@]} - 1)) ]; then
+            osascript -e 'tell application "System Events" to key code 124 using control down'
+            sleep 0.5
+        fi
+    done
+
+    # Return to original space
+    FINAL_SPACE=${#FILES[@]}
+    STEPS_BACK=$((FINAL_SPACE - CURRENT_SPACE))
+    if [ "$STEPS_BACK" -gt 0 ]; then
+        for ((i = 0; i < STEPS_BACK; i++)); do
+            osascript -e 'tell application "System Events" to key code 123 using control down'
+            sleep 0.3
+        done
+    fi
+
+    gum style --foreground 46 "✅ All wallpapers applied!"
+    exit 0
+fi
+
+# Get workspace names from config for picker
+WORKSPACES=$(swift -e '
+import Foundation
+struct Config: Codable { let workspaces: [Workspace] }
+struct Workspace: Codable { let name: String; let id: String? }
+let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
+let config = try! JSONDecoder().decode(Config.self, from: data)
+for (i, w) in config.workspaces.enumerated() {
+    let id = w.id ?? w.name.lowercased().replacingOccurrences(of: " ", with: "-").filter { $0.isLetter || $0.isNumber || $0 == "-" }
+    print("\(i+1). \(w.name) [\(id)]")
+}
+')
+
+# If name provided as argument, use it; otherwise show picker
+ARG_NAME="${usage_name:-$1}"
+if [ -n "$ARG_NAME" ]; then
+    SELECTION="$ARG_NAME"
+else
+    # Show picker with "All spaces" option first
+    SELECTION=$(echo -e "All spaces\n$WORKSPACES" | gum choose --header "Apply wallpaper to:")
+
+    if [ "$SELECTION" = "All spaces" ]; then
+        exec mise run apply --all
+    fi
+fi
+
+# Extract workspace id from selection (handle both "1. name [id]" format and direct id/name)
+if [[ "$SELECTION" =~ \[([^\]]+)\]$ ]]; then
+    WORKSPACE_ID="${BASH_REMATCH[1]}"
+elif [[ "$SELECTION" =~ ^[0-9]+\. ]]; then
+    # Format: "1. name [id]" - extract id
+    WORKSPACE_ID=$(echo "$SELECTION" | sed 's/.*\[//' | sed 's/\]//')
+else
+    # Direct name/id provided - normalize to lowercase
+    WORKSPACE_ID=$(echo "$SELECTION" | tr '[:upper:]' '[:lower:]')
+fi
+
+# Get workspace config and generate just this one
+WORKSPACE_CONFIG=$(swift -e '
+import Foundation
+struct Config: Codable { let workspaces: [Workspace]; let defaults: Defaults? }
+struct Workspace: Codable { let name: String; let id: String?; let description: String?; let bgColor: String?; let textColor: String? }
+struct Defaults: Codable { let bgColor: String?; let textColor: String? }
+let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
+let config = try! JSONDecoder().decode(Config.self, from: data)
+let searchId = CommandLine.arguments.last!.lowercased()
+for (i, w) in config.workspaces.enumerated() {
+    let id = w.id ?? w.name.lowercased().replacingOccurrences(of: " ", with: "-").filter { $0.isLetter || $0.isNumber || $0 == "-" }
+    if id == searchId || w.name.lowercased() == searchId {
+        let bgColor = w.bgColor ?? config.defaults?.bgColor ?? "#000000"
+        let textColor = w.textColor ?? config.defaults?.textColor ?? "#ffffff"
+        print("NAME:\(w.name)")
+        print("ID:\(id)")
+        print("INDEX:\(i+1)")
+        print("BGCOLOR:\(bgColor)")
+        print("TEXTCOLOR:\(textColor)")
+        if let desc = w.description { print("DESC:\(desc)") }
+        break
+    }
+}
+' "$WORKSPACE_ID")
+
+if [ -z "$WORKSPACE_CONFIG" ]; then
+    gum style --foreground 196 "❌ Workspace not found: $WORKSPACE_ID"
+    exit 1
+fi
+
+# Parse workspace config
+WS_NAME=$(echo "$WORKSPACE_CONFIG" | grep "^NAME:" | cut -d: -f2-)
+WS_ID=$(echo "$WORKSPACE_CONFIG" | grep "^ID:" | cut -d: -f2-)
+WS_INDEX=$(echo "$WORKSPACE_CONFIG" | grep "^INDEX:" | cut -d: -f2-)
+WS_BGCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^BGCOLOR:" | cut -d: -f2-)
+WS_TEXTCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^TEXTCOLOR:" | cut -d: -f2-)
+WS_DESC=$(echo "$WORKSPACE_CONFIG" | grep "^DESC:" | cut -d: -f2-)
+
+# Build generate.swift args
+GEN_ARGS=("$WS_NAME" "--id" "$WS_ID" "--index" "$WS_INDEX" "--bg-color" "$WS_BGCOLOR" "--text-color" "$WS_TEXTCOLOR" "--width" "$SCREEN_W" "--height" "$SCREEN_H")
+if [ -n "$WS_DESC" ]; then
+    GEN_ARGS+=("-d" "$WS_DESC")
+fi
+
+# Generate just this wallpaper
+echo "Generating: $WS_NAME"
+swift src/generate.swift "${GEN_ARGS[@]}" > /dev/null
+
+# Apply
+WALLPAPER_PATH="$OUTPUT_DIR/$WS_ID.$WS_INDEX.png"
+osascript -e "tell application \"System Events\" to set picture of current desktop to \"$WALLPAPER_PATH\""
+gum style --foreground 46 "✅ Applied: $(basename "$WALLPAPER_PATH")"

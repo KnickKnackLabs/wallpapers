@@ -10,7 +10,7 @@ Wallpapers is a native macOS wallpaper generator that creates labeled wallpapers
 
 ## Common Commands
 
-All commands can be run via `mise run <task>` or globally via `wp <task>` (after running `mise run install`).
+All commands can be run via `mise run <task>` or globally via `wp <task>` (after setting up the shell alias).
 
 | Command | Purpose |
 |---------|---------|

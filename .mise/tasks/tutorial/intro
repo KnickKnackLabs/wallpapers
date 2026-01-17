@@ -48,6 +48,9 @@ echo "  4. Navigating between workspaces by name"
 echo "  5. Quick command reference"
 echo ""
 
+gum style --foreground 244 "Tip: Run 'mise run install' to set up the 'wp' alias for quick access."
+echo ""
+
 # Continue prompt
 if ! gum confirm "Ready to begin?"; then
     gum style --foreground 244 "No problem! Run 'mise run tutorial' when you're ready."

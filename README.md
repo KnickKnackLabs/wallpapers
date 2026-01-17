@@ -15,29 +15,49 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 - macOS 13+ (uses native Swift and Core Graphics)
 - Swift 5.9+ (included with Xcode Command Line Tools)
 - [mise](https://mise.jdx.dev/) for task running
+- [gum](https://github.com/charmbracelet/gum) for interactive prompts
+- [jq](https://jqlang.github.io/jq/) for JSON processing
 
-## Quick Start
+## Installation
 
 ```bash
-# Clone the repo
-git clone https://gecgithub01.walmart.com/vn5a6e7/wallpapers.git
-cd wallpapers
+# Clone to the recommended location
+git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
+cd ~/.local/share/wallpapers
 
-# Install mise tools (just gum)
+# Install dependencies (gum, jq)
 mise install
 
-# Install the 'wp' command globally
-mise run install
-
-# Now use from anywhere!
-wp quick       # Generate a wallpaper
-wp set         # Set it as your current desktop's wallpaper
-wp set:all     # Or set the same wallpaper on all desktops
+# Run the interactive tutorial
+mise run tutorial
 ```
 
-> **Note:** Requires `~/.local/bin` in your PATH. The installer will warn you if it's missing.
+### Global `wp` Command
+
+Add this alias to your shell config (`~/.zshrc`, `~/.bashrc`, etc.):
+
+```bash
+alias wp='mise -C ~/.local/share/wallpapers run'
+```
+
+Then reload your shell (`source ~/.zshrc`) and use `wp` from anywhere:
+
+```bash
+wp quick          # Generate a wallpaper
+wp apply --all    # Apply wallpapers to all spaces
+wp goto code      # Switch to a workspace by name
+wp tutorial       # Interactive tutorial
+```
+
+Shell completions work automatically if you have mise completions set up.
 
 ## Tasks
+
+### Getting Started
+| Task | Description |
+|------|-------------|
+| `mise run tutorial` | Interactive tutorial to learn the tool |
+| `mise run install` | Show how to set up the `wp` alias |
 
 ### Generate
 | Task | Description |
@@ -45,13 +65,20 @@ wp set:all     # Or set the same wallpaper on all desktops
 | `mise run generate` | Interactive wallpaper generator with full options |
 | `mise run quick` | Quick generate - just enter a name |
 | `mise run cli` | Direct CLI access to the generator |
-| `mise run help` | Show generator CLI options |
 
-### Set Wallpaper
+### Apply & Navigate
 | Task | Description |
 |------|-------------|
-| `mise run set` | Set wallpaper for current desktop |
-| `mise run set:all` | Set wallpaper for all desktops (cycles through spaces) |
+| `mise run apply` | Apply wallpaper to current or all spaces |
+| `mise run apply --all` | Generate and apply wallpapers to all spaces from config |
+| `mise run goto` | Switch to a workspace by name |
+| `mise run goto -` | Go back to previous workspace |
+
+### Config
+| Task | Description |
+|------|-------------|
+| `mise run config:init` | Create starter config file |
+| `mise run config:edit` | Open config in your editor |
 
 ### Info
 | Task | Description |
@@ -64,9 +91,6 @@ wp set:all     # Or set the same wallpaper on all desktops
 | Task | Description |
 |------|-------------|
 | `mise run clean` | Delete all generated wallpapers |
-| `mise run open` | Open output folder in Finder |
-| `mise run install` | Install `wp` command to ~/.local/bin |
-| `mise run uninstall` | Remove `wp` command |
 
 ## CLI Usage
 

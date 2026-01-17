@@ -60,7 +60,11 @@ echo ""
 
 gum style --foreground 117 "Other"
 echo "  clean                Delete all wallpapers"
-echo "  install              Install global 'wp' command"
+echo "  install              Set up the 'wp' alias"
+echo ""
+
+gum style --foreground 244 "All commands above can be run with 'mise run <command>'"
+gum style --foreground 244 "or 'wp <command>' if you've set up the alias."
 echo ""
 
 # Check if we used a demo config

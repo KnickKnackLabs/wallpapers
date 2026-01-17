@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Switch to a workspace by name"
 #USAGE arg "[name]" help="Workspace name/id, or '-' to go back (shows picker if omitted)"
+#USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
 set -e
 
 CONFIG_FILE="$HOME/.config/wallpapers/config.json"

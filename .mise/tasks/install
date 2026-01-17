@@ -15,7 +15,7 @@ mkdir -p "$BIN_DIR"
 # Write the wrapper script
 cat > "$BIN_FILE" << EOF
 #!/usr/bin/env bash
-# Wallpaper generator CLI - https://gecgithub01.walmart.com/vn5a6e7/wallpapers
+# Wallpaper generator CLI - https://github.com/KnickKnackLabs/wallpapers
 exec mise run -C "$SCRIPT_DIR" "\$@"
 EOF
 
@@ -37,6 +37,6 @@ else
     echo ""
     gum style --foreground 245 "Commands:"
     gum style --foreground 117 "   wp quick          # Quick generate"
-    gum style --foreground 117 "   wp set            # Set wallpaper"
-    gum style --foreground 117 "   wp generate       # Full options"
+    gum style --foreground 117 "   wp goto <name>    # Switch workspace"
+    gum style --foreground 117 "   wp apply --all    # Apply all wallpapers"
 fi

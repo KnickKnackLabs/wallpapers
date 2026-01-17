@@ -4,5 +4,6 @@
 [tools]
 gum = "latest"
 jq = "latest"
+usage = "latest"  # enables shell completions for task args
 
 # Note: Swift is built-in on macOS, no need to manage it

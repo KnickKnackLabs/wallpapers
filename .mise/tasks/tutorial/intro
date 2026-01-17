@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Introduction and overview"
+set -e
+
+# Check dependencies
+for cmd in gum; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+clear
+
+# Welcome banner
+gum style \
+    --foreground 212 --border-foreground 141 --border double \
+    --align center --width 60 --margin "1 2" --padding "2 4" \
+    'Wallpapers Tutorial' \
+    '' \
+    'Create labeled wallpapers for your macOS Spaces'
+
+echo ""
+
+# The problem
+gum style --foreground 141 --bold "The Problem"
+echo ""
+gum style --foreground 245 "macOS Spaces (virtual desktops) are great for organizing work,"
+gum style --foreground 245 "but Apple doesn't let you name them. You're stuck remembering"
+gum style --foreground 245 "which desktop is which by position alone."
+echo ""
+
+# The solution
+gum style --foreground 141 --bold "The Solution"
+echo ""
+gum style --foreground 245 "This tool generates wallpapers with labels, so each Space"
+gum style --foreground 245 "shows its name right on the desktop. Now you can see at a"
+gum style --foreground 245 "glance whether you're on 'Work', 'Personal', or 'Code'."
+echo ""
+
+# What we'll cover
+gum style --foreground 141 --bold "What You'll Learn"
+echo ""
+echo "  1. Setting up your workspace configuration"
+echo "  2. Generating wallpapers"
+echo "  3. Applying wallpapers to Spaces"
+echo "  4. Navigating between workspaces by name"
+echo "  5. Quick command reference"
+echo ""
+
+# Continue prompt
+if ! gum confirm "Ready to begin?"; then
+    gum style --foreground 244 "No problem! Run 'mise run tutorial' when you're ready."
+    exit 1
+fi

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Apply wallpaper to spaces demo"
+set -e
+
+# Check dependencies
+for cmd in gum swift; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+
+# Header
+echo ""
+gum style \
+    --foreground 212 --border-foreground 212 --border rounded \
+    --align center --width 60 --padding "1 2" \
+    "Apply Wallpaper to Spaces"
+echo ""
+
+# Show current space info
+SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+
+gum style --foreground 117 "You're on Desktop $CURRENT_SPACE of $TOTAL_SPACES"
+echo ""
+
+# Explain apply options
+gum style --foreground 141 --bold "Apply Commands"
+echo ""
+echo "  mise run apply              Picker to choose workspace"
+echo "  mise run apply <name>       Apply specific workspace to current"
+echo "  mise run apply --all        Apply to all spaces (by config order)"
+echo ""
+
+gum style --foreground 245 "The '--all' option is powerful: it generates wallpapers for"
+gum style --foreground 245 "each workspace in your config and applies them in order."
+echo ""
+
+# Check if wallpapers exist
+WALLPAPERS=$(ls -t "$OUTPUT_DIR"/*.png 2>/dev/null | head -5)
+
+if [ -n "$WALLPAPERS" ]; then
+    gum style --foreground 141 --bold "Available Wallpapers"
+    echo ""
+
+    while IFS= read -r wp; do
+        gum style --foreground 245 "  $(basename "$wp")"
+    done <<< "$WALLPAPERS"
+    echo ""
+
+    # Offer to apply
+    if gum confirm "Apply the most recent wallpaper to current desktop?"; then
+        LATEST=$(echo "$WALLPAPERS" | head -1)
+
+        gum spin --spinner dot --title "Setting wallpaper..." -- \
+            osascript -e "tell application \"System Events\" to set picture of current desktop to \"$LATEST\""
+
+        gum style --foreground 46 "Wallpaper applied!"
+        echo ""
+        gum style --foreground 245 "Applied: $(basename "$LATEST")"
+    else
+        gum style --foreground 244 "Skipping apply demo."
+    fi
+else
+    gum style --foreground 226 "No wallpapers found in $OUTPUT_DIR"
+    gum style --foreground 244 "Generate some wallpapers first with 'mise run quick'"
+fi
+
+echo ""
+
+# Continue prompt
+if ! gum confirm "Continue to workspace navigation?"; then
+    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    exit 1
+fi

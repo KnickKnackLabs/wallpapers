@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#MISE description="Interactive tutorial to learn the wallpaper generator"
+set -e
+
+# Check dependencies
+for cmd in gum swift jq; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+STATE_DIR="$HOME/.local/state/wallpapers"
+PROGRESS_FILE="$STATE_DIR/tutorial-progress"
+
+# Module definitions (order matters)
+MODULES=("intro" "config" "generate" "apply" "navigate" "summary")
+MODULE_NAMES=("Introduction" "Configuration" "Generate Wallpaper" "Apply Wallpaper" "Navigation" "Summary")
+
+# Get last completed module (0-based index, -1 means none)
+get_progress() {
+    if [ -f "$PROGRESS_FILE" ]; then
+        cat "$PROGRESS_FILE"
+    else
+        echo "-1"
+    fi
+}
+
+# Save progress
+save_progress() {
+    mkdir -p "$STATE_DIR"
+    echo "$1" > "$PROGRESS_FILE"
+}
+
+# Clear progress
+clear_progress() {
+    rm -f "$PROGRESS_FILE"
+}
+
+# Run a module
+run_module() {
+    local module=$1
+    mise run "tutorial:$module"
+    return $?
+}
+
+# Main logic
+LAST_COMPLETED=$(get_progress)
+START_INDEX=0
+
+# If there's saved progress, offer choice
+if [ "$LAST_COMPLETED" -ge 0 ] && [ "$LAST_COMPLETED" -lt $((${#MODULES[@]} - 1)) ]; then
+    NEXT_INDEX=$((LAST_COMPLETED + 1))
+    NEXT_NAME="${MODULE_NAMES[$NEXT_INDEX]}"
+
+    echo ""
+    gum style --foreground 212 --bold "Welcome back!"
+    echo ""
+
+    CHOICE=$(gum choose \
+        "Continue from: $NEXT_NAME" \
+        "Start fresh")
+
+    if [ "$CHOICE" = "Start fresh" ]; then
+        clear_progress
+        START_INDEX=0
+    else
+        START_INDEX=$NEXT_INDEX
+    fi
+fi
+
+# Run modules from start index
+for ((i = START_INDEX; i < ${#MODULES[@]}; i++)); do
+    MODULE="${MODULES[$i]}"
+
+    if ! run_module "$MODULE"; then
+        # User exited, save progress (completed up to previous module)
+        if [ $i -gt 0 ]; then
+            save_progress $((i - 1))
+        fi
+        exit 0
+    fi
+
+    # Save progress after each completed module
+    save_progress "$i"
+done
+
+# Tutorial complete - clear progress
+clear_progress

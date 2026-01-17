@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Workspace navigation demo"
+set -e
+
+# Check dependencies
+for cmd in gum swift jq; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+USER_CONFIG="$HOME/.config/wallpapers/config.json"
+STATE_DIR="$HOME/.local/state/wallpapers"
+ACTIVE_CONFIG_FILE="$STATE_DIR/tutorial-active-config"
+
+# Determine which config to use
+if [ -f "$ACTIVE_CONFIG_FILE" ]; then
+    ACTIVE_CONFIG=$(cat "$ACTIVE_CONFIG_FILE")
+elif [ -f "$USER_CONFIG" ]; then
+    ACTIVE_CONFIG="$USER_CONFIG"
+else
+    ACTIVE_CONFIG=""
+fi
+
+# Header
+echo ""
+gum style \
+    --foreground 212 --border-foreground 212 --border rounded \
+    --align center --width 60 --padding "1 2" \
+    "Navigate Between Workspaces"
+echo ""
+
+# Explain goto
+gum style --foreground 245 "The 'goto' command lets you switch Spaces by workspace name."
+gum style --foreground 245 "Much faster than swiping or using Mission Control!"
+echo ""
+
+# Explain navigation options
+gum style --foreground 141 --bold "Navigation Commands"
+echo ""
+echo "  mise run goto              Picker to choose workspace"
+echo "  mise run goto <name>       Jump to workspace by name or ID"
+echo "  mise run goto -            Go back to previous space (like cd -)"
+echo ""
+
+# Show workspaces from config
+if [ -n "$ACTIVE_CONFIG" ] && [ -f "$ACTIVE_CONFIG" ]; then
+    gum style --foreground 141 --bold "Your Workspaces"
+    echo ""
+    jq -r '.workspaces | to_entries[] | "  \(.key + 1). \(.value.name)"' "$ACTIVE_CONFIG"
+    echo ""
+else
+    gum style --foreground 244 "No config found. Create one with 'mise run config:init'"
+    echo ""
+fi
+
+# Get current space info
+SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
+TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+
+gum style --foreground 117 "Currently on Desktop $CURRENT_SPACE of $TOTAL_SPACES"
+echo ""
+
+# Demo navigation if multiple spaces
+if [ "$TOTAL_SPACES" -gt 1 ]; then
+    gum style --foreground 245 "Under the hood, 'goto' uses Ctrl+Arrow keys to switch spaces."
+    gum style --foreground 245 "Let's do a quick round-trip: switch right, pause, then come back."
+    echo ""
+
+    if gum confirm "Try it?"; then
+        gum style --foreground 244 "Switching to next space..."
+        osascript -e 'tell application "System Events" to key code 124 using control down'
+        sleep 1
+
+        gum style --foreground 244 "Returning..."
+        osascript -e 'tell application "System Events" to key code 123 using control down'
+        sleep 0.5
+
+        gum style --foreground 46 "Back on Desktop $CURRENT_SPACE. That's how 'goto' navigates!"
+        echo ""
+        gum style --foreground 245 "Tip: 'mise run goto -' remembers your previous space."
+    else
+        gum style --foreground 244 "Skipping navigation demo."
+    fi
+else
+    gum style --foreground 226 "Navigation demo requires 2+ Spaces."
+    gum style --foreground 244 "Add more Spaces via Mission Control (F3 or swipe up with 3 fingers)."
+fi
+
+echo ""
+
+# Continue prompt
+if ! gum confirm "Continue to command summary?"; then
+    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    exit 1
+fi

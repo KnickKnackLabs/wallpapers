@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Wallpaper generation demo"
+set -e
+
+# Check dependencies
+for cmd in gum swift; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+
+# Header
+echo ""
+gum style \
+    --foreground 212 --border-foreground 212 --border rounded \
+    --align center --width 60 --padding "1 2" \
+    "Generate a Wallpaper"
+echo ""
+
+# Detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType 2>/dev/null | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+gum style --foreground 117 "Detected screen resolution: ${SCREEN_W}x${SCREEN_H}"
+echo ""
+
+# Explain generation options
+gum style --foreground 141 --bold "Generation Commands"
+echo ""
+echo "  mise run quick         Quick generate with auto resolution"
+echo "  mise run generate      Full interactive (colors, description)"
+echo "  mise run cli \"Name\"    Direct CLI generation"
+echo ""
+
+gum style --foreground 245 "The 'quick' command is the fastest way to create a wallpaper."
+gum style --foreground 245 "It prompts for a name and auto-detects your screen size."
+echo ""
+
+# Offer to generate
+if gum confirm "Generate a demo wallpaper now?"; then
+    echo ""
+    DEMO_NAME="Tutorial Demo"
+    gum style --foreground 245 "Generating wallpaper: \"$DEMO_NAME\""
+    echo ""
+
+    # Generate the wallpaper
+    mkdir -p "$OUTPUT_DIR"
+
+    gum spin --spinner dot --title "Generating wallpaper..." -- \
+        swift "$SCRIPT_DIR/src/generate.swift" "$DEMO_NAME" \
+        --width "$SCREEN_W" --height "$SCREEN_H" \
+        --bg-color "#1a1a2e"
+
+    gum style --foreground 46 "Wallpaper generated!"
+    echo ""
+
+    # Show the generated file
+    LATEST=$(ls -t "$OUTPUT_DIR"/*.png 2>/dev/null | head -1)
+    if [ -n "$LATEST" ]; then
+        gum style --foreground 245 "Saved to:"
+        gum style --foreground 117 "  $LATEST"
+        echo ""
+
+        # Offer to open in Finder
+        if gum confirm "Open wallpapers folder in Finder?"; then
+            open "$OUTPUT_DIR"
+        fi
+    fi
+else
+    gum style --foreground 244 "Skipping generation demo."
+fi
+
+echo ""
+
+# Continue prompt
+if ! gum confirm "Continue to applying wallpapers?"; then
+    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    exit 1
+fi

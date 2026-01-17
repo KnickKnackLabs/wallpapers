@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Configuration setup walkthrough"
+set -e
+
+# Check dependencies
+for cmd in gum jq; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+USER_CONFIG="$HOME/.config/wallpapers/config.json"
+TUTORIAL_CONFIG_DIR="/tmp/wallpapers-tutorial"
+TUTORIAL_CONFIG="$TUTORIAL_CONFIG_DIR/config.json"
+
+# Track which config we're using (for other modules)
+STATE_DIR="$HOME/.local/state/wallpapers"
+ACTIVE_CONFIG_FILE="$STATE_DIR/tutorial-active-config"
+
+# Header
+echo ""
+gum style \
+    --foreground 212 --border-foreground 212 --border rounded \
+    --align center --width 60 --padding "1 2" \
+    "Configuration Setup"
+echo ""
+
+# Check for existing config
+if [ -f "$USER_CONFIG" ]; then
+    gum style --foreground 46 "You already have a config file:"
+    gum style --foreground 117 "  $USER_CONFIG"
+    echo ""
+
+    # Show workspace count
+    WS_COUNT=$(jq '.workspaces | length' "$USER_CONFIG")
+    gum style --foreground 245 "Contains $WS_COUNT workspace(s)"
+    echo ""
+
+    CONFIG_CHOICE=$(gum choose \
+        "Use my existing config" \
+        "Use tutorial demo config (3 sample workspaces)")
+
+    if [ "$CONFIG_CHOICE" = "Use my existing config" ]; then
+        ACTIVE_CONFIG="$USER_CONFIG"
+        gum style --foreground 46 "Using your existing config."
+    else
+        ACTIVE_CONFIG="$TUTORIAL_CONFIG"
+    fi
+else
+    gum style --foreground 245 "No config file found."
+    gum style --foreground 245 "Creating a demo config for this tutorial..."
+    ACTIVE_CONFIG="$TUTORIAL_CONFIG"
+fi
+
+# Create demo config if needed
+if [ "$ACTIVE_CONFIG" = "$TUTORIAL_CONFIG" ]; then
+    mkdir -p "$TUTORIAL_CONFIG_DIR"
+
+    cat > "$TUTORIAL_CONFIG" << 'EOF'
+{
+  "workspaces": [
+    {
+      "name": "Code",
+      "description": "Development workspace",
+      "bgColor": "#1a1a2e"
+    },
+    {
+      "name": "Design",
+      "description": "Creative work",
+      "bgColor": "#16213e"
+    },
+    {
+      "name": "Personal",
+      "description": "Life admin",
+      "bgColor": "#0f3460"
+    }
+  ],
+  "defaults": {
+    "bgColor": "#000000",
+    "textColor": "#ffffff"
+  }
+}
+EOF
+
+    gum style --foreground 46 "Demo config created."
+fi
+
+# Save which config is active (for other modules to use)
+mkdir -p "$STATE_DIR"
+echo "$ACTIVE_CONFIG" > "$ACTIVE_CONFIG_FILE"
+
+echo ""
+
+# Explain config structure
+gum style --foreground 141 --bold "Config File Structure"
+echo ""
+gum style --foreground 245 "Your config defines workspaces with these fields:"
+echo ""
+echo "  name        - The label shown on the wallpaper (required)"
+echo "  description - Optional subtitle text"
+echo "  bgColor     - Background color in hex (e.g., #1a1a2e)"
+echo "  textColor   - Label color (defaults to white)"
+echo "  id          - Optional filename-safe identifier"
+echo ""
+
+gum style --foreground 244 "The 'id' field is useful when your name contains"
+gum style --foreground 244 "special characters like emojis or slashes."
+echo ""
+
+# Show the config
+gum style --foreground 117 "Current config:"
+echo ""
+jq '.' "$ACTIVE_CONFIG"
+echo ""
+
+# Helpful commands
+gum style --foreground 141 --bold "Helpful Commands"
+echo ""
+echo "  mise run config:init   Create a starter config"
+echo "  mise run config:edit   Open config in your editor"
+echo ""
+
+# Continue prompt
+if ! gum confirm "Continue to wallpaper generation?"; then
+    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    exit 1
+fi

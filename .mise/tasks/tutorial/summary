@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+#MISE description="Tutorial: Command reference and completion"
+set -e
+
+# Check dependencies
+for cmd in gum; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Constants
+USER_CONFIG="$HOME/.config/wallpapers/config.json"
+STATE_DIR="$HOME/.local/state/wallpapers"
+ACTIVE_CONFIG_FILE="$STATE_DIR/tutorial-active-config"
+TUTORIAL_CONFIG_DIR="/tmp/wallpapers-tutorial"
+TUTORIAL_CONFIG="$TUTORIAL_CONFIG_DIR/config.json"
+
+# Header
+echo ""
+gum style \
+    --foreground 212 --border-foreground 141 --border double \
+    --align center --width 60 --margin "1 2" --padding "2 4" \
+    'Tutorial Complete!'
+echo ""
+
+# Command reference
+gum style --foreground 141 --bold "Quick Reference"
+echo ""
+
+gum style --foreground 117 "Generation"
+echo "  quick                Quick generate (auto resolution)"
+echo "  generate             Full interactive generator"
+echo "  cli \"Name\" [opts]    Direct CLI generation"
+echo ""
+
+gum style --foreground 117 "Apply & Set"
+echo "  apply                Picker for single or all spaces"
+echo "  apply <name>         Apply specific workspace"
+echo "  apply --all          Apply to all spaces"
+echo ""
+
+gum style --foreground 117 "Navigation"
+echo "  goto                 Picker to switch workspaces"
+echo "  goto <name>          Switch to workspace by name"
+echo "  goto -               Go back to previous space"
+echo ""
+
+gum style --foreground 117 "Config"
+echo "  config:init          Create starter config"
+echo "  config:edit          Open config in \$EDITOR"
+echo ""
+
+gum style --foreground 117 "Info"
+echo "  info:space           Show current desktop (e.g., 3/5)"
+echo "  info:list            List generated wallpapers"
+echo "  info:resolution      Show screen resolution"
+echo ""
+
+gum style --foreground 117 "Other"
+echo "  clean                Delete all wallpapers"
+echo "  install              Install global 'wp' command"
+echo ""
+
+# Check if we used a demo config
+USED_DEMO=false
+if [ -f "$ACTIVE_CONFIG_FILE" ]; then
+    ACTIVE_CONFIG=$(cat "$ACTIVE_CONFIG_FILE")
+    if [ "$ACTIVE_CONFIG" = "$TUTORIAL_CONFIG" ]; then
+        USED_DEMO=true
+    fi
+fi
+
+# Offer to save demo config
+if [ "$USED_DEMO" = true ] && [ -f "$TUTORIAL_CONFIG" ]; then
+    echo ""
+    gum style --foreground 141 --bold "Save Demo Config?"
+    echo ""
+    gum style --foreground 245 "You used a demo config during the tutorial."
+    gum style --foreground 245 "Would you like to save it as your real config?"
+    echo ""
+
+    if [ ! -f "$USER_CONFIG" ]; then
+        if gum confirm "Save demo config to ~/.config/wallpapers/config.json?"; then
+            mkdir -p "$(dirname "$USER_CONFIG")"
+            cp "$TUTORIAL_CONFIG" "$USER_CONFIG"
+            gum style --foreground 46 "Config saved! Edit with 'mise run config:edit'"
+        else
+            gum style --foreground 244 "Demo config discarded."
+        fi
+    else
+        gum style --foreground 244 "You already have a config file."
+        gum style --foreground 244 "Run 'mise run config:edit' to modify it."
+    fi
+fi
+
+# Cleanup
+rm -f "$ACTIVE_CONFIG_FILE"
+rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null || true
+
+echo ""
+gum style --foreground 46 "Happy wallpapering!"
+gum style --foreground 245 "Run 'mise run tutorial' anytime to revisit this guide."
+echo ""

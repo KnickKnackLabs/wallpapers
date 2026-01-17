@@ -19,6 +19,42 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 
 # If --all flag, generate all and apply to all spaces
 if [ "${usage_all:-}" = "true" ]; then
+    # Count workspaces in config
+    CONFIG_COUNT=$(swift -e '
+import Foundation
+struct Config: Codable { let workspaces: [Workspace] }
+struct Workspace: Codable { let name: String }
+let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
+let config = try! JSONDecoder().decode(Config.self, from: data)
+print(config.workspaces.count)
+')
+
+    # Get actual space count
+    SPACE_INFO=$(swift src/current-space.swift)
+    SPACE_COUNT=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+
+    # Check for mismatch
+    if [ "$CONFIG_COUNT" -ne "$SPACE_COUNT" ]; then
+        gum style --foreground 226 "⚠️  Mismatch: config has $CONFIG_COUNT workspaces, but you have $SPACE_COUNT spaces"
+        echo ""
+        if [ "$CONFIG_COUNT" -gt "$SPACE_COUNT" ]; then
+            DIFF=$((CONFIG_COUNT - SPACE_COUNT))
+            gum style --foreground 245 "To add $DIFF space(s):"
+            echo "  1. Open Mission Control (Ctrl+Up or swipe up with 3 fingers)"
+            echo "  2. Hover over the top row and click the '+' button"
+            echo "  3. Repeat until you have $CONFIG_COUNT spaces"
+        else
+            DIFF=$((SPACE_COUNT - CONFIG_COUNT))
+            gum style --foreground 245 "You have $DIFF extra space(s). Either:"
+            echo "  • Add more workspaces to your config: mise run config:edit"
+            echo "  • Or remove spaces: Mission Control → hover space → click X"
+        fi
+        echo ""
+        if ! gum confirm "Continue anyway?"; then
+            exit 0
+        fi
+    fi
+
     # Generate and get file list
     OUTPUT=$(swift src/setup.swift --width "$SCREEN_W" --height "$SCREEN_H")
     FILES=()

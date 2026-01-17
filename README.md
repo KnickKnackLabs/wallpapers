@@ -21,23 +21,24 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 ## Installation
 
 ```bash
-# Clone to the recommended location
+git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers && cd ~/.local/share/wallpapers && mise install && mise run tutorial
+```
+
+Or step by step:
+
+```bash
 git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
 cd ~/.local/share/wallpapers
-
-# Install dependencies (gum, jq)
-mise install
-
-# Run the interactive tutorial
-mise run tutorial
+mise install      # Install dependencies (gum, jq)
+mise run tutorial # Interactive tutorial
 ```
 
 ### Global `wp` Command
 
-Add this alias to your shell config (`~/.zshrc`, `~/.bashrc`, etc.):
+Add this to your shell config (`~/.zshrc`, `~/.bashrc`, etc.):
 
 ```bash
-alias wp='mise -C ~/.local/share/wallpapers run'
+eval "$(mise -C ~/.local/share/wallpapers run -q shell)"
 ```
 
 Then reload your shell (`source ~/.zshrc`) and use `wp` from anywhere:
@@ -57,7 +58,7 @@ Shell completions work automatically if you have mise completions set up.
 | Task | Description |
 |------|-------------|
 | `mise run tutorial` | Interactive tutorial to learn the tool |
-| `mise run install` | Show how to set up the `wp` alias |
+| `mise run shell` | Output shell config for `wp` alias (use with eval) |
 
 ### Generate
 | Task | Description |

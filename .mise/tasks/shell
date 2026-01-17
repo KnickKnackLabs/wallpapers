@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Output shell configuration (use with eval)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+echo "alias wp='mise -C \"$REPO_DIR\" run'"

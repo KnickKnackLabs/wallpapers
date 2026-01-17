@@ -60,7 +60,7 @@ echo ""
 
 gum style --foreground 117 "Other"
 echo "  clean                Delete all wallpapers"
-echo "  install              Set up the 'wp' alias"
+echo "  shell                Output shell config for 'wp' alias"
 echo ""
 
 gum style --foreground 244 "All commands above can be run with 'mise run <command>'"

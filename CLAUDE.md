@@ -30,7 +30,7 @@ All commands can be run via `mise run <task>` or globally via `wp <task>` (after
 | `mise run info:resolution` | Show screen resolution |
 | `mise run clean` | Delete all generated wallpapers |
 | `mise run tutorial` | Interactive tutorial to learn the tool |
-| `mise run install` | Show how to set up the global `wp` alias |
+| `mise run shell` | Output shell config for `wp` alias (use with eval) |
 
 Direct Swift invocation: `swift src/generate.swift "Name" [options]`
 

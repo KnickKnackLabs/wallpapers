@@ -13,12 +13,17 @@
                (in peril)
 ```
 
-Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you name Spaces/Desktops, use custom wallpapers to identify them instead.
+Generate labeled wallpapers for macOS workspaces.
+
+**What's a workspace?** macOS lets you create multiple desktops called "Spaces" (swipe left/right with three fingers, or ctrl+←/→). But Apple doesn't let you name them - so this tool generates wallpapers with labels to identify each one.
 
 ## Quick Start
 
 ```bash
-# Install
+# Install mise (if you don't have it)
+curl https://mise.run | sh
+
+# Install wallpapers
 git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
 cd ~/.local/share/wallpapers && mise install
 

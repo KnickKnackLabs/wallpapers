@@ -1,5 +1,18 @@
 # Wallpapers
 
+```
+         ▲ ▲
+        ╱   ╲
+       ╱ ° ° ╲      ╭───╮
+      ▕  ───  ▏ ◁━━━│ @ │━╮
+       ╲ ╰─╯ ╱      ╰───╯ │
+      ╱╱    ╲╲        ◀═══╯
+     ╱╱  ╱╲  ╲╲
+    ▔▔  ▔▔▔▔  ▔▔
+   ZERGLING    TURTLE
+               (in peril)
+```
+
 Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you name Spaces/Desktops, use custom wallpapers to identify them instead.
 
 ## Features

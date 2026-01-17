@@ -17,8 +17,10 @@ All commands can be run via `mise run <task>` or globally via `wp <task>` (after
 | `mise run quick` | Default task - quick generate with auto-detected resolution, auto-sets wallpaper |
 | `mise run generate` | Full interactive generator (colors, resolution, description) |
 | `mise run cli "Name" [options]` | Direct CLI without interactive prompts |
-| `mise run setup` | Generate wallpapers from config and apply to spaces |
-| `mise run setup --generate-only` | Generate wallpapers from config without applying |
+| `mise run apply` | Show picker to apply wallpaper to current or all spaces |
+| `mise run apply <name>` | Generate and apply wallpaper for a specific workspace |
+| `mise run apply --all` | Generate and apply wallpapers to all spaces |
+| `mise run goto <name>` | Switch to a workspace by name |
 | `mise run config:init` | Create starter config at ~/.config/wallpapers/config.json |
 | `mise run config:edit` | Open config in $EDITOR |
 | `mise run set` | Set wallpaper for current desktop |

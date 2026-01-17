@@ -1,50 +1,74 @@
 #!/usr/bin/env bash
 #MISE description="Switch to a workspace by name"
-#USAGE arg "<name>" help="Workspace name or id to switch to"
+#USAGE arg "[name]" help="Workspace name/id, or '-' to go back (shows picker if omitted)"
 set -e
 
 CONFIG_FILE="$HOME/.config/wallpapers/config.json"
+STATE_DIR="$HOME/.local/state/wallpapers"
+PREVIOUS_FILE="$STATE_DIR/previous-space"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     gum style --foreground 196 "❌ Config not found. Run: mise run config:init"
     exit 1
 fi
 
-TARGET="${usage_name:-$1}"
-if [ -z "$TARGET" ]; then
-    gum style --foreground 196 "❌ Usage: mise run goto <name>"
-    exit 1
-fi
-
-# Find workspace index in config
-TARGET_INDEX=$(swift -e '
-import Foundation
-struct Config: Codable { let workspaces: [Workspace] }
-struct Workspace: Codable { let name: String; let id: String? }
-let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
-let config = try! JSONDecoder().decode(Config.self, from: data)
-let search = CommandLine.arguments.last!.lowercased()
-for (i, w) in config.workspaces.enumerated() {
-    let id = w.id ?? w.name.lowercased().replacingOccurrences(of: " ", with: "-").filter { $0.isLetter || $0.isNumber || $0 == "-" }
-    if id == search || w.name.lowercased() == search {
-        print(i + 1)
-        break
-    }
-}
-' "$TARGET")
-
-if [ -z "$TARGET_INDEX" ]; then
-    gum style --foreground 196 "❌ Workspace not found: $TARGET"
-    exit 1
-fi
-
 # Get current space
 CURRENT=$(swift src/current-space.swift | cut -d'/' -f1)
 
-if [ "$CURRENT" -eq "$TARGET_INDEX" ]; then
-    gum style --foreground 245 "Already on workspace $TARGET"
-    exit 0
+TARGET="${usage_name:-$1}"
+
+# Handle "-" (go back)
+if [ "$TARGET" = "-" ]; then
+    if [ ! -f "$PREVIOUS_FILE" ]; then
+        gum style --foreground 196 "❌ No previous workspace"
+        exit 1
+    fi
+    TARGET_INDEX=$(cat "$PREVIOUS_FILE")
+
+    if [ "$CURRENT" -eq "$TARGET_INDEX" ]; then
+        gum style --foreground 245 "Already on previous workspace"
+        exit 0
+    fi
+# Handle no argument (show picker)
+elif [ -z "$TARGET" ]; then
+    WORKSPACES=$(jq -r '.workspaces | to_entries[] | "\(.key + 1). \(.value.name)"' "$CONFIG_FILE")
+
+    SELECTION=$(echo "$WORKSPACES" | gum choose --header "Go to workspace:")
+
+    # Extract index from selection (format: "1. name")
+    TARGET_INDEX=$(echo "$SELECTION" | cut -d'.' -f1)
+
+    if [ "$CURRENT" -eq "$TARGET_INDEX" ]; then
+        gum style --foreground 245 "Already on that workspace"
+        exit 0
+    fi
+# Handle name argument
+else
+    # Find workspace index by name or id
+    TARGET_LOWER=$(echo "$TARGET" | tr '[:upper:]' '[:lower:]')
+    TARGET_INDEX=$(jq -r --arg search "$TARGET_LOWER" '
+        .workspaces | to_entries[] |
+        select(
+            (.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; ""))) == $search
+            or (.value.name | ascii_downcase) == $search
+        ) |
+        .key + 1
+    ' "$CONFIG_FILE")
+
+    if [ -z "$TARGET_INDEX" ]; then
+        gum style --foreground 196 "❌ Workspace not found: $TARGET"
+        exit 1
+    fi
+
+    if [ "$CURRENT" -eq "$TARGET_INDEX" ]; then
+        gum style --foreground 245 "Already on workspace $TARGET"
+        exit 0
+    fi
 fi
+
+# Save current space before navigating
+mkdir -p "$STATE_DIR"
+echo "$CURRENT" > "$PREVIOUS_FILE"
 
 # Calculate direction and steps
 if [ "$TARGET_INDEX" -gt "$CURRENT" ]; then

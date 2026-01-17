@@ -20,14 +20,7 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 # If --all flag, generate all and apply to all spaces
 if [ "${usage_all:-}" = "true" ]; then
     # Count workspaces in config
-    CONFIG_COUNT=$(swift -e '
-import Foundation
-struct Config: Codable { let workspaces: [Workspace] }
-struct Workspace: Codable { let name: String }
-let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
-let config = try! JSONDecoder().decode(Config.self, from: data)
-print(config.workspaces.count)
-')
+    CONFIG_COUNT=$(jq '.workspaces | length' "$CONFIG_FILE")
 
     # Get actual space count
     SPACE_INFO=$(swift src/current-space.swift)
@@ -110,17 +103,7 @@ print(config.workspaces.count)
 fi
 
 # Get workspace names from config for picker
-WORKSPACES=$(swift -e '
-import Foundation
-struct Config: Codable { let workspaces: [Workspace] }
-struct Workspace: Codable { let name: String; let id: String? }
-let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
-let config = try! JSONDecoder().decode(Config.self, from: data)
-for (i, w) in config.workspaces.enumerated() {
-    let id = w.id ?? w.name.lowercased().replacingOccurrences(of: " ", with: "-").filter { $0.isLetter || $0.isNumber || $0 == "-" }
-    print("\(i+1). \(w.name) [\(id)]")
-}
-')
+WORKSPACES=$(jq -r '.workspaces | to_entries[] | "\(.key + 1). \(.value.name) [\(.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; "")))]"' "$CONFIG_FILE")
 
 # If name provided as argument, use it; otherwise show picker
 ARG_NAME="${usage_name:-$1}"
@@ -146,30 +129,25 @@ else
     WORKSPACE_ID=$(echo "$SELECTION" | tr '[:upper:]' '[:lower:]')
 fi
 
-# Get workspace config and generate just this one
-WORKSPACE_CONFIG=$(swift -e '
-import Foundation
-struct Config: Codable { let workspaces: [Workspace]; let defaults: Defaults? }
-struct Workspace: Codable { let name: String; let id: String?; let description: String?; let bgColor: String?; let textColor: String? }
-struct Defaults: Codable { let bgColor: String?; let textColor: String? }
-let data = FileManager.default.contents(atPath: NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath)!
-let config = try! JSONDecoder().decode(Config.self, from: data)
-let searchId = CommandLine.arguments.last!.lowercased()
-for (i, w) in config.workspaces.enumerated() {
-    let id = w.id ?? w.name.lowercased().replacingOccurrences(of: " ", with: "-").filter { $0.isLetter || $0.isNumber || $0 == "-" }
-    if id == searchId || w.name.lowercased() == searchId {
-        let bgColor = w.bgColor ?? config.defaults?.bgColor ?? "#000000"
-        let textColor = w.textColor ?? config.defaults?.textColor ?? "#ffffff"
-        print("NAME:\(w.name)")
-        print("ID:\(id)")
-        print("INDEX:\(i+1)")
-        print("BGCOLOR:\(bgColor)")
-        print("TEXTCOLOR:\(textColor)")
-        if let desc = w.description { print("DESC:\(desc)") }
-        break
-    }
-}
-' "$WORKSPACE_ID")
+# Get workspace config with defaults merged
+WORKSPACE_CONFIG=$(jq -r --arg search "$WORKSPACE_ID" '
+    .defaults as $defaults |
+    .workspaces | to_entries[] |
+    select(
+        (.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; ""))) == $search
+        or (.value.name | ascii_downcase) == $search
+    ) |
+    {
+        name: .value.name,
+        id: (.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; ""))),
+        index: (.key + 1),
+        bgColor: (.value.bgColor // $defaults.bgColor // "#000000"),
+        textColor: (.value.textColor // $defaults.textColor // "#ffffff"),
+        description: .value.description
+    } |
+    "NAME:\(.name)\nID:\(.id)\nINDEX:\(.index)\nBGCOLOR:\(.bgColor)\nTEXTCOLOR:\(.textColor)" +
+    (if .description then "\nDESC:\(.description)" else "" end)
+' "$CONFIG_FILE")
 
 if [ -z "$WORKSPACE_CONFIG" ]; then
     gum style --foreground 196 "❌ Workspace not found: $WORKSPACE_ID"

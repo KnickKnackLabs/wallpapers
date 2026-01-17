@@ -3,5 +3,6 @@
 
 [tools]
 gum = "latest"
+jq = "latest"
 
 # Note: Swift is built-in on macOS, no need to manage it

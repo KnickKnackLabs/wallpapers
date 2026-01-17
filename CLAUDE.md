@@ -20,7 +20,9 @@ All commands can be run via `mise run <task>` or globally via `wp <task>` (after
 | `mise run apply` | Show picker to apply wallpaper to current or all spaces |
 | `mise run apply <name>` | Generate and apply wallpaper for a specific workspace |
 | `mise run apply --all` | Generate and apply wallpapers to all spaces |
+| `mise run goto` | Show picker to switch workspaces |
 | `mise run goto <name>` | Switch to a workspace by name |
+| `mise run goto -` | Go back to previous workspace (like `cd -`) |
 | `mise run config:init` | Create starter config at ~/.config/wallpapers/config.json |
 | `mise run config:edit` | Open config in $EDITOR |
 | `mise run set` | Set wallpaper for current desktop |

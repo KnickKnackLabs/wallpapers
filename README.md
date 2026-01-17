@@ -4,8 +4,8 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 
 ## Features
 
-- **Zero dependencies** - Uses native Swift with Core Graphics (no Python, no npm)
-- **Auto-detect screen resolution** - Generates wallpapers that fit perfectly
+- **Native Swift** - Core Graphics for rendering, no Python or npm
+- **Auto-detect resolution** - Generates wallpapers that fit your screen
 - **Auto-detect current space** - Knows which desktop you're on
 - **LTR/RTL support** - Text positions correctly for English, Hebrew, Arabic, etc.
 - **Beautiful CLI** - Interactive prompts powered by [gum](https://github.com/charmbracelet/gum)
@@ -14,9 +14,7 @@ Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you na
 
 - macOS 13+ (uses native Swift and Core Graphics)
 - Swift 5.9+ (included with Xcode Command Line Tools)
-- [mise](https://mise.jdx.dev/) for task running
-- [gum](https://github.com/charmbracelet/gum) for interactive prompts
-- [jq](https://jqlang.github.io/jq/) for JSON processing
+- [mise](https://mise.jdx.dev/) for task running (installs gum and jq automatically)
 
 ## Installation
 
@@ -91,6 +89,7 @@ Shell completions work automatically if you have mise completions set up.
 ### Utilities
 | Task | Description |
 |------|-------------|
+| `mise run open` | Open wallpapers folder in Finder |
 | `mise run clean` | Delete all generated wallpapers |
 
 ## CLI Usage
@@ -137,9 +136,10 @@ swift src/generate.swift "Work" -r 4k
 
 ## Output
 
-Generated wallpapers are saved to `output/` with filenames like:
-- `code-2880x1864.png`
-- `design-1920x1080.png`
+Generated wallpapers are saved to `~/.local/share/wallpapers/` with filenames like:
+- `personal.1.png`
+- `work.2.png`
+- `skydiving.3.png`
 
 ## License
 

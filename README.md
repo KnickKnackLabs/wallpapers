@@ -15,144 +15,92 @@
 
 Generate labeled wallpapers for macOS workspaces. Since macOS doesn't let you name Spaces/Desktops, use custom wallpapers to identify them instead.
 
+## Quick Start
+
+```bash
+# Install
+git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
+cd ~/.local/share/wallpapers && mise install
+
+# Add to your shell config (~/.zshrc or ~/.bashrc)
+eval "$(mise -C ~/.local/share/wallpapers run -q shell)"
+
+# Reload shell and run the tutorial
+source ~/.zshrc
+wp tutorial
+```
+
+## Usage
+
+```bash
+wp                # Apply wallpaper (picker or --all)
+wp --all          # Apply wallpapers to all spaces from config
+wp quick          # Quick one-off wallpaper for current space
+wp goto           # Switch workspace (picker)
+wp goto code      # Switch to workspace by name
+wp goto -         # Go back to previous workspace
+```
+
+## Config
+
+Create your config with `wp config:init`, then edit with `wp config:edit`:
+
+```json
+{
+  "workspaces": [
+    { "name": "Personal", "bgColor": "#2d3436" },
+    { "name": "Code", "bgColor": "#1a1a2e", "description": "Dev environment" },
+    { "name": "Design", "bgColor": "#0f3460" }
+  ],
+  "defaults": {
+    "bgColor": "#000000",
+    "textColor": "#ffffff"
+  }
+}
+```
+
+The order of workspaces matches your Spaces order (left to right).
+
 ## Features
 
-- **Native Swift** - Core Graphics for rendering, no Python or npm
-- **Auto-detect resolution** - Generates wallpapers that fit your screen
-- **Auto-detect current space** - Knows which desktop you're on
-- **LTR/RTL support** - Text positions correctly for English, Hebrew, Arabic, etc.
-- **Beautiful CLI** - Interactive prompts powered by [gum](https://github.com/charmbracelet/gum)
+- **Native Swift** - Core Graphics rendering, no external dependencies
+- **Auto-detect resolution** - Fits your screen perfectly
+- **LTR/RTL support** - Works with English, Hebrew, Arabic, etc.
+- **Space navigation** - Switch workspaces by name
 
 ## Requirements
 
-- macOS 13+ (uses native Swift and Core Graphics)
-- Swift 5.9+ (included with Xcode Command Line Tools)
-- [mise](https://mise.jdx.dev/) for task running (installs gum and jq automatically)
+- macOS 13+
+- [mise](https://mise.jdx.dev/) (installs other dependencies automatically)
 
-## Installation
+## All Commands
 
-```bash
-git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers && cd ~/.local/share/wallpapers && mise install && mise run tutorial
-```
+| Command | Description |
+|---------|-------------|
+| `wp` | Apply wallpaper (shows picker, or use `--all`) |
+| `wp quick` | Quick generate - just enter a name |
+| `wp goto [name]` | Switch workspace (picker if no name) |
+| `wp goto -` | Go back to previous workspace |
+| `wp generate` | Full interactive generator with all options |
+| `wp config:init` | Create starter config |
+| `wp config:edit` | Open config in editor |
+| `wp info:space` | Show current desktop number |
+| `wp info:list` | List generated wallpapers |
+| `wp clean` | Delete all generated wallpapers |
+| `wp tutorial` | Interactive tutorial |
 
-Or step by step:
+## Advanced
 
-```bash
-git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
-cd ~/.local/share/wallpapers
-mise install      # Install dependencies (gum, jq)
-mise run tutorial # Interactive tutorial
-```
-
-### Global `wp` Command
-
-Add this to your shell config (`~/.zshrc`, `~/.bashrc`, etc.):
-
-```bash
-eval "$(mise -C ~/.local/share/wallpapers run -q shell)"
-```
-
-Then reload your shell (`source ~/.zshrc`) and use `wp` from anywhere:
+For scripting or direct access:
 
 ```bash
-wp quick          # Generate a wallpaper
-wp apply --all    # Apply wallpapers to all spaces
-wp goto code      # Switch to a workspace by name
-wp tutorial       # Interactive tutorial
+swift src/generate.swift "Name" [options]
+  -d, --description    Subtitle text
+  -r, --resolution     Preset: 1080p, 1440p, 4k, macbook-14, macbook-16, imac-24, studio-display
+  --width, --height    Custom dimensions
+  --bg-color           Background hex color
+  --text-color         Text hex color
 ```
-
-Shell completions work automatically if you have mise completions set up.
-
-## Tasks
-
-### Getting Started
-| Task | Description |
-|------|-------------|
-| `mise run tutorial` | Interactive tutorial to learn the tool |
-| `mise run shell` | Output shell config for `wp` alias (use with eval) |
-
-### Generate
-| Task | Description |
-|------|-------------|
-| `mise run generate` | Interactive wallpaper generator with full options |
-| `mise run quick` | Quick generate - just enter a name |
-| `mise run cli` | Direct CLI access to the generator |
-
-### Apply & Navigate
-| Task | Description |
-|------|-------------|
-| `mise run apply` | Apply wallpaper to current or all spaces |
-| `mise run apply --all` | Generate and apply wallpapers to all spaces from config |
-| `mise run goto` | Switch to a workspace by name |
-| `mise run goto -` | Go back to previous workspace |
-
-### Config
-| Task | Description |
-|------|-------------|
-| `mise run config:init` | Create starter config file |
-| `mise run config:edit` | Open config in your editor |
-
-### Info
-| Task | Description |
-|------|-------------|
-| `mise run info:list` | List generated wallpapers |
-| `mise run info:resolution` | Show your screen resolution |
-| `mise run info:space` | Show current desktop number |
-
-### Utilities
-| Task | Description |
-|------|-------------|
-| `mise run open` | Open wallpapers folder in Finder |
-| `mise run clean` | Delete all generated wallpapers |
-
-## CLI Usage
-
-For scripting or advanced usage:
-
-```bash
-# Basic
-swift src/generate.swift "My Workspace"
-
-# With description
-swift src/generate.swift "Code" -d "Main development"
-
-# Custom resolution
-swift src/generate.swift "Design" --width 2880 --height 1864
-
-# Custom colors
-swift src/generate.swift "Music" --bg-color "#1a1a2e" --text-color "#00d9ff"
-
-# Preset resolutions
-swift src/generate.swift "Work" -r 4k
-```
-
-### Resolution Presets
-
-- `1080p` - 1920x1080
-- `1440p` - 2560x1440
-- `4k` - 3840x2160
-- `macbook-14` - 3024x1964
-- `macbook-16` - 3456x2234
-- `imac-24` - 4480x2520
-- `studio-display` - 5120x2880
-
-## How It Works
-
-1. **Generator** (`src/generate.swift`) - Creates PNG wallpapers using Core Graphics
-2. **Space Detection** (`src/current-space.swift`) - Uses private macOS APIs to detect current desktop
-3. **Tasks** (`.mise/tasks/`) - File-based mise tasks with gum-powered CLI experiences
-
-### Text Positioning
-
-- **LTR languages** (English, etc.) → Bottom-left corner
-- **RTL languages** (Hebrew, Arabic) → Bottom-right corner
-
-## Output
-
-Generated wallpapers are saved to `~/.local/share/wallpapers/` with filenames like:
-- `personal.1.png`
-- `work.2.png`
-- `skydiving.3.png`
 
 ## License
 

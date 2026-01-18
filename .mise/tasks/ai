@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+#MISE description="Agent instructions for helping users"
+
+cat << 'EOF'
+# Wallpapers
+
+> llms.txt for AI agents helping users USE this tool.
+> For agents working ON the codebase, see CLAUDE.md.
+
+## Overview
+
+Wallpapers generates labeled PNG wallpapers for macOS Spaces (virtual desktops). macOS allows multiple desktops but doesn't let users name them. This tool solves that by generating wallpapers with text labels.
+
+The typical workflow:
+1. User defines workspaces in a config file
+2. `wp --all` generates wallpapers and applies them to each Space
+3. User can navigate between workspaces by name with `wp goto`
+
+## Concepts
+
+### Spaces vs Workspaces
+
+- **Space**: macOS's term for a virtual desktop (the OS feature). Created via Mission Control. Navigated with ctrl+←/→ or three-finger swipe.
+- **Workspace**: Our term for a labeled Space. Defined in config.
+- Spaces are ordered left-to-right. The config order must match.
+
+### The Config File
+
+Location: `~/.config/wallpapers/config.json`
+
+```json
+{
+  "workspaces": [
+    { "name": "Personal", "bgColor": "#2d3436" },
+    { "name": "Code", "bgColor": "#1a1a2e", "description": "Dev environment" },
+    { "name": "Skydiving 🪂", "id": "skydiving", "bgColor": "#6c5ce7" }
+  ],
+  "defaults": {
+    "bgColor": "#000000",
+    "textColor": "#ffffff"
+  }
+}
+```
+
+**Workspace fields:**
+- `name` (required): Text displayed on wallpaper
+- `description` (optional): Smaller subtitle below name
+- `bgColor` (optional): Hex background color
+- `textColor` (optional): Hex text color
+- `id` (optional): Filename-safe identifier. Auto-slugified from name if omitted. Required for names with emoji.
+
+**Important:** Array order = Space order (left to right). Workspace at index 0 → leftmost Space.
+
+### Generated Files
+
+Location: `~/.local/share/wallpapers/`
+Format: `{id}.{index}.png`
+Examples: `personal.1.png`, `code.2.png`, `skydiving.3.png`
+
+### Text Positioning
+
+Automatic based on language:
+- LTR (English, etc.): bottom-left corner
+- RTL (Hebrew, Arabic): bottom-right corner
+
+Detection uses Unicode ranges. User cannot override.
+
+### Resolution
+
+Auto-detected from display. Presets available:
+- 1080p: 1920x1080
+- 1440p: 2560x1440
+- 4k: 3840x2160
+- macbook-14: 3024x1964
+- macbook-16: 3456x2234
+- imac-24: 4480x2520
+- studio-display: 5120x2880
+
+## Commands Reference
+
+### wp (default command)
+
+Alias for `wp apply`. Shows picker to select workspace, generates wallpaper, applies to current Space.
+
+With `--all`: applies to ALL Spaces from config.
+
+```bash
+wp              # picker
+wp --all        # all spaces
+wp code         # specific workspace by name/id
+```
+
+### wp --all
+
+Main workflow command. For each workspace in config:
+1. Generates wallpaper at screen resolution
+2. Navigates to corresponding Space
+3. Sets wallpaper via osascript
+4. Returns to original Space
+
+Warns if config workspace count ≠ actual Space count.
+
+### wp quick
+
+Quick one-off wallpaper without config:
+1. Prompts for name only
+2. Auto-detects resolution
+3. Generates and immediately applies
+
+Good for testing or temporary workspaces.
+
+### wp goto [name]
+
+Navigate to workspace by name.
+
+```bash
+wp goto          # shows picker
+wp goto code     # direct navigation
+wp goto -        # return to previous (like cd -)
+```
+
+Stores previous location for `goto -` functionality.
+
+### wp config:init
+
+Creates starter config at `~/.config/wallpapers/config.json` with example workspaces (Personal, Work, Skydiving). Safe: prompts before overwriting existing.
+
+### wp config:edit
+
+Opens config in $EDITOR. Create first with `config:init`.
+
+### wp info:space
+
+Shows current Space number: "Desktop 3 of 5"
+
+### wp info:resolution
+
+Shows detected screen resolution.
+
+### wp info:list
+
+Lists generated wallpaper files.
+
+### wp generate
+
+Full interactive generator. Prompts for:
+- Name
+- Description
+- Resolution (picker with presets + auto)
+- Background color (picker + custom hex)
+- Text color (picker + custom hex)
+
+More control than `wp quick`.
+
+### wp clean
+
+Deletes all generated wallpapers. For starting fresh.
+
+### wp tutorial
+
+Interactive 6-module tutorial:
+1. intro - What is this tool
+2. config - Setting up config
+3. generate - Creating wallpapers
+4. apply - Applying to Spaces
+5. navigate - Switching workspaces
+6. summary - Recap
+
+Tracks progress. Can resume where left off.
+
+## User Goals → Commands
+
+### "Set up wallpapers for all my workspaces"
+
+```bash
+wp config:init        # create config
+wp config:edit        # define workspaces
+wp --all              # generate and apply
+```
+
+Help them: match workspace count to Space count.
+
+### "Quick wallpaper for this desktop"
+
+```bash
+wp quick
+```
+
+Enter name, done.
+
+### "Switch to my code workspace"
+
+```bash
+wp goto code
+```
+
+Or `wp goto` for picker.
+
+### "Go back to previous workspace"
+
+```bash
+wp goto -
+```
+
+### "See which desktop I'm on"
+
+```bash
+wp info:space
+```
+
+### "Change colors for a workspace"
+
+Edit config:
+```bash
+wp config:edit
+```
+
+Change `bgColor` or `textColor`, then:
+```bash
+wp --all
+```
+
+### "Add a new workspace"
+
+1. Add Space in Mission Control (F3 → hover top → +)
+2. Add workspace to config: `wp config:edit`
+3. Apply: `wp --all`
+
+### "Remove a workspace"
+
+1. Remove from config: `wp config:edit`
+2. Remove Space in Mission Control (hover → X)
+3. Apply: `wp --all`
+
+## Troubleshooting
+
+### "wp: command not found"
+
+Shell alias not set. Add to ~/.zshrc or ~/.bashrc:
+```bash
+eval "$(mise -C ~/.local/share/wallpapers run -q shell)"
+```
+Then: `source ~/.zshrc`
+
+### "Config has N workspaces but you have M Spaces"
+
+Mismatch. Either:
+- Add/remove Spaces via Mission Control to match config
+- Edit config to match actual Space count
+
+The tool warns but continues if user confirms.
+
+### Wallpaper not updating
+
+macOS caches aggressively. Try:
+```bash
+wp clean
+wp --all
+```
+
+### Wrong text position
+
+Not a bug. RTL languages (Hebrew, Arabic) auto-position right. Check for hidden RTL characters if unexpected.
+
+### Config syntax error
+
+Invalid JSON. Common issues:
+- Missing commas between objects
+- Trailing commas (not allowed in JSON)
+- Single quotes (must use double)
+
+Validate with: `jq . ~/.config/wallpapers/config.json`
+
+### "Workspace not found"
+
+Name matching is case-insensitive. Check:
+- Exact name in config
+- Or the `id` field if specified
+- Spaces in name become hyphens in id
+
+## Edge Cases
+
+- **Empty name**: Creates wallpaper with just background
+- **Long name**: Renders but may overflow (no truncation)
+- **Emoji**: Works in name, but use explicit `id` for clean filenames
+- **Single Space**: Works fine
+- **Many Spaces**: No hard limit, tested up to ~10
+
+## Technical Notes
+
+### Space Detection
+
+Uses private macOS APIs:
+- `CGSCopyManagedDisplaySpaces()`
+- `CGSGetActiveSpace()`
+- `CGSMainConnectionID()`
+
+May break in future macOS versions.
+
+### Space Navigation
+
+`wp --all` and `wp goto` use osascript to send ctrl+arrow keys:
+- Left: key code 123
+- Right: key code 124
+
+### Wallpaper Setting
+
+Via osascript:
+```applescript
+tell application "System Events" to set picture of current desktop to "/path/to/wallpaper.png"
+```
+
+### Dependencies
+
+- Swift 5.9+ (Xcode CLI tools)
+- mise (task runner)
+- gum (interactive prompts)
+- jq (JSON parsing)
+
+mise auto-installs gum and jq.
+
+## File Locations Summary
+
+| What | Where |
+|------|-------|
+| Config | `~/.config/wallpapers/config.json` |
+| Wallpapers | `~/.local/share/wallpapers/*.png` |
+| Tutorial state | `~/.local/state/wallpapers/tutorial-progress` |
+| Previous space | `~/.local/state/wallpapers/previous-space` |
+| Tool install | `~/.local/share/wallpapers/` (typical) |
+
+## Quick Diagnostic
+
+If user has issues, gather:
+```bash
+wp info:space        # current space
+wp info:resolution   # screen res
+wp info:list         # generated files
+cat ~/.config/wallpapers/config.json  # their config
+```
+EOF

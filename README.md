@@ -25,7 +25,7 @@ curl https://mise.run | sh
 
 # Install wallpapers
 git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
-cd ~/.local/share/wallpapers && mise install
+cd ~/.local/share/wallpapers && mise trust && mise install
 
 # Add to your shell config (~/.zshrc or ~/.bashrc)
 eval "$(mise -C ~/.local/share/wallpapers run -q shell)"

@@ -338,4 +338,84 @@ wp info:resolution   # screen res
 wp info:list         # generated files
 cat ~/.config/wallpapers/config.json  # their config
 ```
+
+---
+
+# Current User State
+
+> This section is dynamically generated to show the user's current setup.
+
 EOF
+
+# --- Dynamic content below ---
+
+CONFIG_FILE="$HOME/.config/wallpapers/config.json"
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+
+echo "## Environment"
+echo ""
+echo "- **Screen resolution:** $(system_profiler SPDisplaysDataType 2>/dev/null | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | tr -d ' ' || echo "unknown")"
+
+SPACE_INFO=$(swift src/current-space.swift 2>/dev/null || echo "unknown")
+echo "- **Current space:** $SPACE_INFO"
+echo ""
+
+# Config status
+echo "## Config"
+echo ""
+if [ -f "$CONFIG_FILE" ]; then
+    echo "Config exists at \`$CONFIG_FILE\`"
+    echo ""
+    CONFIG_COUNT=$(jq '.workspaces | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
+    echo "**Workspaces defined:** $CONFIG_COUNT"
+    echo ""
+
+    # Show workspace summary
+    echo "| # | Name | ID | Colors |"
+    echo "|---|------|-----|--------|"
+    jq -r '.workspaces | to_entries[] | "| \(.key + 1) | \(.value.name) | \(.value.id // "-") | bg:\(.value.bgColor // "default") |"' "$CONFIG_FILE" 2>/dev/null
+    echo ""
+
+    # Check for mismatch
+    if [ "$SPACE_INFO" != "unknown" ]; then
+        SPACE_COUNT=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+        if [ "$CONFIG_COUNT" != "$SPACE_COUNT" ]; then
+            echo "**⚠️ MISMATCH:** Config has $CONFIG_COUNT workspaces but user has $SPACE_COUNT Spaces."
+            echo ""
+        else
+            echo "**✓ Match:** Config workspaces ($CONFIG_COUNT) = actual Spaces ($SPACE_COUNT)"
+            echo ""
+        fi
+    fi
+
+    echo "<details>"
+    echo "<summary>Full config.json</summary>"
+    echo ""
+    echo '```json'
+    cat "$CONFIG_FILE"
+    echo '```'
+    echo "</details>"
+    echo ""
+else
+    echo "**No config file found.**"
+    echo ""
+    echo "User needs to run: \`wp config:init\`"
+    echo ""
+fi
+
+# Generated wallpapers
+echo "## Generated Wallpapers"
+echo ""
+if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR"/*.png 2>/dev/null)" ]; then
+    echo "Location: \`$OUTPUT_DIR\`"
+    echo ""
+    echo "| File | Size | Modified |"
+    echo "|------|------|----------|"
+    ls -lh "$OUTPUT_DIR"/*.png 2>/dev/null | awk '{print "| " $NF " | " $5 " | " $6 " " $7 " |"}' | sed "s|$OUTPUT_DIR/||"
+    echo ""
+else
+    echo "**No wallpapers generated yet.**"
+    echo ""
+    echo "User needs to run: \`wp --all\` or \`wp quick\`"
+    echo ""
+fi

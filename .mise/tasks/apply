@@ -71,22 +71,55 @@ if [ "${usage_all:-}" = "true" ]; then
     CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
 
     # Navigate to space 1
-    for ((i = CURRENT_SPACE; i > 1; i--)); do
-        osascript -e 'tell application "System Events" to key code 123 using control down'
-        sleep 0.5
-    done
-    sleep 0.5
+    if [ "$CURRENT_SPACE" -gt 1 ]; then
+        for ((j = CURRENT_SPACE; j > 1; j--)); do
+            osascript -e 'tell application "System Events" to key code 123 using control down'
+            sleep 0.3
+        done
+        # Wait until we've actually arrived at space 1
+        _attempt=0
+        while [ $_attempt -lt 10 ]; do
+            _current=$(swift src/current-space.swift | cut -d'/' -f1)
+            if [ "$_current" = "1" ]; then
+                break
+            fi
+            sleep 0.3
+            ((_attempt++))
+        done
+    fi
+
+    # Helper function to wait until we're on the expected space
+    wait_for_space() {
+        local expected=$1
+        local max_attempts=10
+        local attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            local current=$(swift src/current-space.swift | cut -d'/' -f1)
+            if [ "$current" = "$expected" ]; then
+                return 0
+            fi
+            sleep 0.3
+            ((attempt++))
+        done
+        echo "Warning: Could not confirm space $expected (on $current)" >&2
+        return 1
+    }
 
     # Apply each wallpaper
     for i in "${!FILES[@]}"; do
         FILE="${FILES[$i]}"
+        EXPECTED_SPACE=$((i + 1))
+
+        # Verify we're on the expected space before setting wallpaper
+        wait_for_space "$EXPECTED_SPACE"
+
         echo "Setting wallpaper $((i+1))/${#FILES[@]}: $(basename "$FILE")"
         osascript -e "tell application \"System Events\" to set picture of current desktop to \"$FILE\""
-        sleep 0.5
+        sleep 0.3
 
         if [ $i -lt $((${#FILES[@]} - 1)) ]; then
             osascript -e 'tell application "System Events" to key code 124 using control down'
-            sleep 0.5
+            sleep 0.3
         fi
     done
 

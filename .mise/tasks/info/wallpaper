@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Show current wallpaper file path"
+set -e
+
+WALLPAPER=$(osascript -e 'tell application "System Events" to get picture of current desktop')
+echo "Current wallpaper: $WALLPAPER"

@@ -68,26 +68,6 @@ if [ "${usage_all:-}" = "true" ]; then
 
     gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
 
-    CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
-
-    # Navigate to space 1
-    if [ "$CURRENT_SPACE" -gt 1 ]; then
-        for ((j = CURRENT_SPACE; j > 1; j--)); do
-            osascript -e 'tell application "System Events" to key code 123 using control down'
-            sleep 0.3
-        done
-        # Wait until we've actually arrived at space 1
-        _attempt=0
-        while [ $_attempt -lt 10 ]; do
-            _current=$(swift src/current-space.swift | cut -d'/' -f1)
-            if [ "$_current" = "1" ]; then
-                break
-            fi
-            sleep 0.3
-            ((_attempt++))
-        done
-    fi
-
     # Helper function to wait until we're on the expected space
     wait_for_space() {
         local expected=$1
@@ -104,6 +84,17 @@ if [ "${usage_all:-}" = "true" ]; then
         echo "Warning: Could not confirm space $expected (on $current)" >&2
         return 1
     }
+
+    CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
+
+    # Navigate to space 1
+    if [ "$CURRENT_SPACE" -gt 1 ]; then
+        for ((j = CURRENT_SPACE; j > 1; j--)); do
+            osascript -e 'tell application "System Events" to key code 123 using control down'
+            sleep 0.3
+        done
+        wait_for_space 1
+    fi
 
     # Apply each wallpaper
     for i in "${!FILES[@]}"; do

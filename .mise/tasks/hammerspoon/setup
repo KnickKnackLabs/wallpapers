@@ -8,6 +8,7 @@ HAMMERSPOON_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/${
 APP_PATH="/Applications/Hammerspoon.app"
 CONFIG_DIR="$HOME/.hammerspoon"
 CONFIG_FILE="$CONFIG_DIR/init.lua"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
 
 # Header
 gum style \
@@ -61,93 +62,8 @@ fi
 
 echo ""
 
-# Step 2: Check if running
-gum style --foreground 141 --bold "Step 2: Launch Hammerspoon"
-echo ""
-
-if pgrep -x "Hammerspoon" > /dev/null; then
-    gum style --foreground 46 "✅ Hammerspoon is running"
-else
-    gum style --foreground 245 "Hammerspoon needs to be running to continue."
-    echo ""
-
-    if gum confirm "Launch Hammerspoon now?"; then
-        open "$APP_PATH"
-
-        gum style --foreground 245 "Waiting for Hammerspoon to start..."
-        sleep 2
-
-        # Wait for it to actually start
-        for i in {1..10}; do
-            if pgrep -x "Hammerspoon" > /dev/null; then
-                break
-            fi
-            sleep 1
-        done
-
-        if pgrep -x "Hammerspoon" > /dev/null; then
-            gum style --foreground 46 "✅ Hammerspoon is running"
-        else
-            gum style --foreground 226 "⚠️  Hammerspoon may need manual launch"
-            gum style --foreground 245 "   If you see a security dialog, click 'Open'"
-            echo ""
-            gum confirm "Press enter when Hammerspoon is running..."
-        fi
-    else
-        gum style --foreground 196 "❌ Hammerspoon must be running to continue"
-        exit 1
-    fi
-fi
-
-echo ""
-
-# Step 3: Check accessibility permissions
-gum style --foreground 141 --bold "Step 3: Accessibility Permissions"
-echo ""
-
-# Try to run a simple hs command to test accessibility
-# We use the hs CLI that comes with Hammerspoon
-HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
-
-check_accessibility() {
-    if [ -x "$HS_CLI" ]; then
-        # Try a simple command that requires accessibility
-        RESULT=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "error")
-        if [ "$RESULT" = "true" ]; then
-            return 0
-        fi
-    fi
-    return 1
-}
-
-if check_accessibility; then
-    gum style --foreground 46 "✅ Accessibility permissions enabled"
-else
-    gum style --foreground 226 "⚠️  Accessibility permissions required"
-    echo ""
-    gum style --foreground 245 "Hammerspoon needs accessibility permissions to control windows and spaces."
-    echo ""
-    gum style --foreground 255 "To enable:"
-    echo "  1. Click the Hammerspoon menu bar icon (🔨)"
-    echo "  2. Click 'Preferences...'"
-    echo "  3. Click 'Enable Accessibility'"
-    echo "  4. Toggle Hammerspoon ON in System Settings"
-    echo ""
-
-    gum confirm "Press enter when you've enabled accessibility..."
-
-    # Check again
-    if check_accessibility; then
-        gum style --foreground 46 "✅ Accessibility permissions enabled"
-    else
-        gum style --foreground 226 "⚠️  Could not verify accessibility. Continuing anyway..."
-    fi
-fi
-
-echo ""
-
-# Step 4: Initialize config
-gum style --foreground 141 --bold "Step 4: Configuration"
+# Step 2: Create config (BEFORE launching, so IPC is ready)
+gum style --foreground 141 --bold "Step 2: Configuration"
 echo ""
 
 mkdir -p "$CONFIG_DIR"
@@ -263,12 +179,108 @@ print("wp integration loaded - " .. wp.spaceCount() .. " spaces available")
 INITLUA
 
     gum style --foreground 46 "✅ Config created at $CONFIG_FILE"
+fi
 
-    # Reload Hammerspoon config
-    if [ -x "$HS_CLI" ]; then
-        gum spin --spinner dot --title "Reloading Hammerspoon config..." -- \
-            "$HS_CLI" -c "hs.reload()" 2>/dev/null || true
+echo ""
+
+# Step 3: Launch Hammerspoon
+gum style --foreground 141 --bold "Step 3: Launch Hammerspoon"
+echo ""
+
+start_hammerspoon() {
+    open "$APP_PATH"
+    gum style --foreground 245 "Waiting for Hammerspoon to start..."
+    for i in {1..10}; do
+        if pgrep -x "Hammerspoon" > /dev/null; then
+            return 0
+        fi
         sleep 1
+    done
+    return 1
+}
+
+if pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 46 "✅ Hammerspoon is running"
+else
+    gum style --foreground 245 "Hammerspoon needs to be running to continue."
+    echo ""
+
+    if gum confirm "Launch Hammerspoon now?"; then
+        if start_hammerspoon; then
+            gum style --foreground 46 "✅ Hammerspoon is running"
+        else
+            gum style --foreground 226 "⚠️  Hammerspoon may need manual launch"
+            gum style --foreground 245 "   If you see a security dialog, click 'Open'"
+            echo ""
+            gum confirm "Press enter when Hammerspoon is running..."
+        fi
+    else
+        gum style --foreground 196 "❌ Hammerspoon must be running to continue"
+        exit 1
+    fi
+fi
+
+echo ""
+
+# Step 4: Check accessibility permissions
+gum style --foreground 141 --bold "Step 4: Accessibility Permissions"
+echo ""
+
+check_accessibility() {
+    if [ -x "$HS_CLI" ]; then
+        RESULT=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "error")
+        if [ "$RESULT" = "true" ]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+restart_hammerspoon() {
+    gum spin --spinner dot --title "Restarting Hammerspoon..." -- bash -c '
+        pkill -x Hammerspoon 2>/dev/null || true
+        sleep 1
+    '
+    open "$APP_PATH"
+    sleep 2
+    # Wait for it to fully start
+    for i in {1..10}; do
+        if pgrep -x "Hammerspoon" > /dev/null; then
+            sleep 1  # Extra time for IPC to initialize
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+if check_accessibility; then
+    gum style --foreground 46 "✅ Accessibility permissions enabled"
+else
+    gum style --foreground 226 "⚠️  Accessibility permissions required"
+    echo ""
+    gum style --foreground 245 "Hammerspoon needs accessibility permissions to control windows and spaces."
+    echo ""
+    gum style --foreground 255 "To enable:"
+    echo "  1. Click the Hammerspoon menu bar icon (🔨)"
+    echo "  2. Click 'Preferences...'"
+    echo "  3. Click 'Enable Accessibility'"
+    echo "  4. Toggle Hammerspoon ON in System Settings"
+    echo ""
+
+    gum confirm "Press enter when you've enabled accessibility..."
+
+    # Restart Hammerspoon to pick up the new permissions
+    echo ""
+    gum style --foreground 245 "Restarting Hammerspoon to apply permissions..."
+    restart_hammerspoon
+
+    # Check again
+    if check_accessibility; then
+        gum style --foreground 46 "✅ Accessibility permissions enabled"
+    else
+        gum style --foreground 226 "⚠️  Could not verify accessibility"
+        gum style --foreground 245 "   You may need to restart Hammerspoon manually"
     fi
 fi
 
@@ -287,7 +299,7 @@ if [ -x "$HS_CLI" ]; then
         gum style --foreground 245 "   Current space: $CURRENT_SPACE of $SPACE_COUNT"
     else
         gum style --foreground 226 "⚠️  Could not verify wp integration"
-        gum style --foreground 245 "   This might be okay - try reloading Hammerspoon (Cmd+Ctrl+R)"
+        gum style --foreground 245 "   Try reloading Hammerspoon config (Cmd+Ctrl+R)"
     fi
 else
     gum style --foreground 226 "⚠️  Hammerspoon CLI not found"

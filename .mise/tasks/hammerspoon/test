@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#MISE description="Test Hammerspoon workspace functions interactively"
+set -e
+
+APP_PATH="/Applications/Hammerspoon.app"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+
+# Check prerequisites
+if [ ! -x "$HS_CLI" ]; then
+    gum style --foreground 196 "❌ Hammerspoon CLI not found"
+    gum style --foreground 245 "   Run: mise run hammerspoon:setup"
+    exit 1
+fi
+
+if ! pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 196 "❌ Hammerspoon is not running"
+    gum style --foreground 245 "   Start with: open /Applications/Hammerspoon.app"
+    exit 1
+fi
+
+echo ""
+gum style --foreground 141 --bold "Hammerspoon Test Suite"
+echo ""
+
+# Test 1: Query spaces
+gum style --foreground 245 "Testing space queries..."
+
+SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null || echo "error")
+CURRENT=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null || echo "error")
+
+if [ "$SPACE_COUNT" = "error" ] || [ "$CURRENT" = "error" ]; then
+    gum style --foreground 196 "❌ Failed to query spaces"
+    gum style --foreground 245 "   Make sure wp integration is in your init.lua"
+    gum style --foreground 245 "   Try: mise run hammerspoon:setup"
+    exit 1
+fi
+
+gum style --foreground 46 "✅ Space query works: $CURRENT of $SPACE_COUNT spaces"
+echo ""
+
+# Interactive tests
+gum style --foreground 141 --bold "Interactive Tests"
+echo ""
+gum style --foreground 245 "These tests will actually move between spaces."
+echo ""
+
+if ! gum confirm "Continue with interactive tests?"; then
+    gum style --foreground 245 "Skipped interactive tests"
+    exit 0
+fi
+
+echo ""
+
+# Test 2: Navigate to space
+TARGET=$(gum input --placeholder "1" --prompt "Go to space number (1-$SPACE_COUNT): ")
+TARGET=${TARGET:-1}
+
+if [ "$TARGET" -ge 1 ] && [ "$TARGET" -le "$SPACE_COUNT" ]; then
+    gum style --foreground 245 "Navigating to space $TARGET..."
+    RESULT=$("$HS_CLI" -c "return wp.gotoSpace($TARGET)" 2>/dev/null || echo "false")
+
+    sleep 0.5
+    NEW_CURRENT=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null || echo "error")
+
+    if [ "$NEW_CURRENT" = "$TARGET" ]; then
+        gum style --foreground 46 "✅ Successfully moved to space $TARGET"
+    else
+        gum style --foreground 226 "⚠️  Navigation may have failed (now on space $NEW_CURRENT)"
+    fi
+else
+    gum style --foreground 226 "⚠️  Invalid space number"
+fi
+
+echo ""
+
+# Test 3: Add space (optional)
+if gum confirm "Test adding a new space?"; then
+    OLD_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
+    gum style --foreground 245 "Adding a new space..."
+
+    "$HS_CLI" -c "wp.addSpace()" 2>/dev/null || true
+    sleep 1
+
+    NEW_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
+
+    if [ "$NEW_COUNT" -gt "$OLD_COUNT" ]; then
+        gum style --foreground 46 "✅ Space added! Now have $NEW_COUNT spaces"
+
+        if gum confirm "Remove the test space?"; then
+            "$HS_CLI" -c "wp.removeSpace()" 2>/dev/null || true
+            sleep 1
+            FINAL_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
+            gum style --foreground 46 "✅ Space removed. Back to $FINAL_COUNT spaces"
+        fi
+    else
+        gum style --foreground 226 "⚠️  Could not add space (count unchanged: $NEW_COUNT)"
+    fi
+fi
+
+echo ""
+gum style --foreground 46 "🎉 Tests complete!"
+echo ""

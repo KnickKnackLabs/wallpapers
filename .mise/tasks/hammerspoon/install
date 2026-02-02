@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#MISE description="Install or upgrade Hammerspoon"
+set -e
+
+# Pinned version - wp manages updates, not Hammerspoon itself
+HAMMERSPOON_VERSION="1.1.0"
+HAMMERSPOON_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/${HAMMERSPOON_VERSION}/Hammerspoon-${HAMMERSPOON_VERSION}.zip"
+APP_PATH="/Applications/Hammerspoon.app"
+
+# Check current state
+INSTALLED=false
+INSTALLED_VERSION=""
+NEEDS_INSTALL=false
+
+if [ -d "$APP_PATH" ]; then
+    INSTALLED=true
+    INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+fi
+
+# Determine if we need to install
+if [ "$INSTALLED" = false ]; then
+    NEEDS_INSTALL=true
+elif [ "$INSTALLED_VERSION" != "$HAMMERSPOON_VERSION" ] && [ "$INSTALLED_VERSION" != "unknown" ]; then
+    # Different version - check if user wants to upgrade
+    if [ "${WP_HAMMERSPOON_AUTO_UPGRADE:-}" = "true" ]; then
+        NEEDS_INSTALL=true
+        rm -rf "$APP_PATH"
+    else
+        echo "Hammerspoon $INSTALLED_VERSION installed (expected $HAMMERSPOON_VERSION)"
+        echo "Run with WP_HAMMERSPOON_AUTO_UPGRADE=true to upgrade"
+    fi
+fi
+
+if [ "$NEEDS_INSTALL" = true ]; then
+    echo "Installing Hammerspoon $HAMMERSPOON_VERSION..."
+
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf $TEMP_DIR" EXIT
+
+    curl -L -s -o "$TEMP_DIR/Hammerspoon.zip" "$HAMMERSPOON_URL"
+    unzip -q -o "$TEMP_DIR/Hammerspoon.zip" -d "$TEMP_DIR"
+    mv "$TEMP_DIR/Hammerspoon.app" "$APP_PATH"
+
+    echo "Hammerspoon $HAMMERSPOON_VERSION installed"
+else
+    if [ "$INSTALLED" = true ]; then
+        echo "Hammerspoon $INSTALLED_VERSION already installed"
+    fi
+fi

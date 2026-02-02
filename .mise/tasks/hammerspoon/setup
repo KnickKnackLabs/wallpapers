@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-#MISE description="Install and configure Hammerspoon for advanced workspace management"
+#MISE description="Initial Hammerspoon setup for wp integration"
 set -e
 
-# Pinned version - wp manages updates, not Hammerspoon itself
-HAMMERSPOON_VERSION="1.1.0"
-HAMMERSPOON_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/${HAMMERSPOON_VERSION}/Hammerspoon-${HAMMERSPOON_VERSION}.zip"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_PATH="/Applications/Hammerspoon.app"
 CONFIG_DIR="$HOME/.hammerspoon"
 CONFIG_FILE="$CONFIG_DIR/init.lua"
@@ -20,166 +18,35 @@ gum style \
 
 echo ""
 
-# Step 1: Check if already installed
+# Step 1: Installation
 gum style --foreground 141 --bold "Step 1: Installation"
 echo ""
 
-if [ -d "$APP_PATH" ]; then
-    gum style --foreground 46 "✅ Hammerspoon is already installed"
-
-    # Check version if possible
-    INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
-    gum style --foreground 245 "   Installed version: $INSTALLED_VERSION"
-    gum style --foreground 245 "   Expected version: $HAMMERSPOON_VERSION"
-
-    if [ "$INSTALLED_VERSION" != "$HAMMERSPOON_VERSION" ] && [ "$INSTALLED_VERSION" != "unknown" ]; then
-        echo ""
-        if gum confirm "Different version detected. Reinstall $HAMMERSPOON_VERSION?"; then
-            rm -rf "$APP_PATH"
-        else
-            gum style --foreground 245 "Keeping existing installation"
-        fi
-    fi
+if ! "$SCRIPT_DIR/install"; then
+    gum style --foreground 196 "❌ Installation failed"
+    exit 1
 fi
 
-if [ ! -d "$APP_PATH" ]; then
-    gum style --foreground 245 "Downloading Hammerspoon $HAMMERSPOON_VERSION..."
-
-    TEMP_DIR=$(mktemp -d)
-    trap "rm -rf $TEMP_DIR" EXIT
-
-    gum spin --spinner dot --title "Downloading..." -- \
-        curl -L -o "$TEMP_DIR/Hammerspoon.zip" "$HAMMERSPOON_URL"
-
-    gum spin --spinner dot --title "Extracting..." -- \
-        unzip -q -o "$TEMP_DIR/Hammerspoon.zip" -d "$TEMP_DIR"
-
-    gum spin --spinner dot --title "Installing to /Applications..." -- \
-        mv "$TEMP_DIR/Hammerspoon.app" "$APP_PATH"
-
-    gum style --foreground 46 "✅ Hammerspoon $HAMMERSPOON_VERSION installed"
+if [ -d "$APP_PATH" ]; then
+    INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+    gum style --foreground 46 "✅ Hammerspoon $INSTALLED_VERSION installed"
+else
+    gum style --foreground 196 "❌ Installation failed"
+    exit 1
 fi
 
 echo ""
 
-# Step 2: Create config (BEFORE launching, so IPC is ready)
+# Step 2: Configuration
 gum style --foreground 141 --bold "Step 2: Configuration"
 echo ""
 
-mkdir -p "$CONFIG_DIR"
-
-if [ -f "$CONFIG_FILE" ]; then
-    gum style --foreground 46 "✅ Config exists at $CONFIG_FILE"
-
-    # Check if it has our wp integration
-    if grep -q "wp-integration" "$CONFIG_FILE" 2>/dev/null; then
-        gum style --foreground 245 "   wp integration already configured"
-    else
-        echo ""
-        gum style --foreground 226 "⚠️  Existing config found without wp integration"
-        gum style --foreground 245 "   You may want to add wp integration manually later"
-    fi
-else
-    gum style --foreground 245 "Creating initial Hammerspoon config..."
-
-    cat > "$CONFIG_FILE" << 'INITLUA'
--- Hammerspoon configuration
--- Managed by wp (wallpapers)
--- wp-integration: v1
-
--- Enable CLI (hs command) - required for wp integration
-require("hs.ipc")
-
--- Reload config with Cmd+Ctrl+R
-hs.hotkey.bind({"cmd", "ctrl"}, "R", function()
-    hs.reload()
-end)
-
--- Notify on config load
-hs.notify.new({title="Hammerspoon", informativeText="Config loaded"}):send()
-
---------------------------------------------------
--- wp workspace integration
--- These functions are called by wp for advanced
--- workspace management features
---------------------------------------------------
-
-local wp = {}
-
--- Get current space number
-function wp.currentSpace()
-    local screen = hs.screen.mainScreen()
-    local spaces = hs.spaces.spacesForScreen(screen)
-    local current = hs.spaces.focusedSpace()
-    for i, space in ipairs(spaces) do
-        if space == current then
-            return i
-        end
-    end
-    return 1
-end
-
--- Get total space count
-function wp.spaceCount()
-    local screen = hs.screen.mainScreen()
-    local spaces = hs.spaces.spacesForScreen(screen)
-    return #spaces
-end
-
--- Go to space by number
-function wp.gotoSpace(num)
-    local screen = hs.screen.mainScreen()
-    local spaces = hs.spaces.spacesForScreen(screen)
-    if num >= 1 and num <= #spaces then
-        hs.spaces.gotoSpace(spaces[num])
-        return true
-    end
-    return false
-end
-
--- Add a new space
-function wp.addSpace()
-    local screen = hs.screen.mainScreen()
-    hs.spaces.addSpaceToScreen(screen, true)
-    return wp.spaceCount()
-end
-
--- Remove last space (careful!)
-function wp.removeSpace()
-    local screen = hs.screen.mainScreen()
-    local spaces = hs.spaces.spacesForScreen(screen)
-    if #spaces > 1 then
-        hs.spaces.removeSpace(spaces[#spaces], true)
-        return true
-    end
-    return false
-end
-
--- Move a window to a space
-function wp.moveWindowToSpace(appName, spaceNum)
-    local app = hs.application.get(appName)
-    if app then
-        local win = app:mainWindow()
-        if win then
-            local screen = hs.screen.mainScreen()
-            local spaces = hs.spaces.spacesForScreen(screen)
-            if spaceNum >= 1 and spaceNum <= #spaces then
-                hs.spaces.moveWindowToSpace(win, spaces[spaceNum])
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- Expose wp functions globally for CLI access
-_G.wp = wp
-
-print("wp integration loaded - " .. wp.spaceCount() .. " spaces available")
-INITLUA
-
-    gum style --foreground 46 "✅ Config created at $CONFIG_FILE"
+if ! "$SCRIPT_DIR/config"; then
+    gum style --foreground 196 "❌ Configuration failed"
+    exit 1
 fi
+
+gum style --foreground 46 "✅ wp integration configured"
 
 echo ""
 
@@ -189,7 +56,6 @@ echo ""
 
 start_hammerspoon() {
     open "$APP_PATH"
-    gum style --foreground 245 "Waiting for Hammerspoon to start..."
     for i in {1..10}; do
         if pgrep -x "Hammerspoon" > /dev/null; then
             return 0
@@ -243,10 +109,9 @@ restart_hammerspoon() {
     '
     open "$APP_PATH"
     sleep 2
-    # Wait for it to fully start
     for i in {1..10}; do
         if pgrep -x "Hammerspoon" > /dev/null; then
-            sleep 1  # Extra time for IPC to initialize
+            sleep 1
             return 0
         fi
         sleep 1
@@ -270,12 +135,10 @@ else
 
     gum confirm "Press enter when you've enabled accessibility..."
 
-    # Restart Hammerspoon to pick up the new permissions
     echo ""
     gum style --foreground 245 "Restarting Hammerspoon to apply permissions..."
     restart_hammerspoon
 
-    # Check again
     if check_accessibility; then
         gum style --foreground 46 "✅ Accessibility permissions enabled"
     else

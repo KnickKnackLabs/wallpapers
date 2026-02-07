@@ -149,8 +149,31 @@ fi
 
 echo ""
 
-# Step 5: Verify integration
-gum style --foreground 141 --bold "Step 5: Verify Integration"
+# Step 5: Disable space-switching animation
+gum style --foreground 141 --bold "Step 5: Faster Space Switching"
+echo ""
+
+ANIM_KEY="NSAutomaticWindowAnimationsEnabled"
+CURRENT_VAL=$(defaults read -g "$ANIM_KEY" 2>/dev/null || echo "missing")
+
+if [ "$CURRENT_VAL" = "0" ]; then
+    gum style --foreground 46 "✅ Space-switching animation already disabled"
+else
+    gum style --foreground 245 "macOS animates space transitions by default."
+    gum style --foreground 245 "Disabling this makes switching feel instant."
+    echo ""
+    if gum confirm "Disable space-switching animation?"; then
+        defaults write -g "$ANIM_KEY" -bool false
+        gum style --foreground 46 "✅ Animation disabled"
+    else
+        gum style --foreground 245 "Skipped (you can change this later in System Settings)"
+    fi
+fi
+
+echo ""
+
+# Step 6: Verify integration
+gum style --foreground 141 --bold "Step 6: Verify Integration"
 echo ""
 
 if [ -x "$HS_CLI" ]; then

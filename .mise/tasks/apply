@@ -14,6 +14,28 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Require Hammerspoon
+APP_PATH="/Applications/Hammerspoon.app"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 196 "❌ Hammerspoon not running. Run: mise run hammerspoon:setup"
+    exit 1
+fi
+
+# Alternate wallpaper filename suffix to bust macOS cache.
+# macOS won't reload a wallpaper if the path hasn't changed,
+# so we alternate between .a.png and .b.png.
+cache_bust() {
+    local base="${1%.png}"
+    if [ -f "${base}.a.png" ]; then
+        rm -f "${base}.a.png"
+        echo "${base}.b.png"
+    else
+        rm -f "${base}.b.png"
+        echo "${base}.a.png"
+    fi
+}
+
 # Auto-detect screen resolution
 SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
 SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
@@ -25,8 +47,11 @@ if [ "${usage_all:-}" = "true" ]; then
     CONFIG_COUNT=$(jq '.workspaces | length' "$CONFIG_FILE")
 
     # Get actual space count
-    SPACE_INFO=$(swift src/current-space.swift)
-    SPACE_COUNT=$(echo "$SPACE_INFO" | cut -d'/' -f2)
+    SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
+    if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "error" ]; then
+        gum style --foreground 196 "❌ Could not get space count from Hammerspoon"
+        exit 1
+    fi
 
     # Check for mismatch
     if [ "$CONFIG_COUNT" -ne "$SPACE_COUNT" ]; then
@@ -68,61 +93,25 @@ if [ "${usage_all:-}" = "true" ]; then
 
     gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
 
-    # Helper function to wait until we're on the expected space
-    wait_for_space() {
-        local expected=$1
-        local max_attempts=10
-        local attempt=0
-        while [ $attempt -lt $max_attempts ]; do
-            local current=$(swift src/current-space.swift | cut -d'/' -f1)
-            if [ "$current" = "$expected" ]; then
-                return 0
-            fi
-            sleep 0.3
-            ((attempt++))
-        done
-        echo "Warning: Could not confirm space $expected (on $current)" >&2
-        return 1
-    }
-
-    CURRENT_SPACE=$(swift src/current-space.swift | cut -d'/' -f1)
-
-    # Navigate to space 1
-    if [ "$CURRENT_SPACE" -gt 1 ]; then
-        for ((j = CURRENT_SPACE; j > 1; j--)); do
-            osascript -e 'tell application "System Events" to key code 123 using control down'
-            sleep 0.3
-        done
-        wait_for_space 1
-    fi
+    CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
 
     # Apply each wallpaper
     for i in "${!FILES[@]}"; do
         FILE="${FILES[$i]}"
-        EXPECTED_SPACE=$((i + 1))
+        TARGET_SPACE=$((i + 1))
 
-        # Verify we're on the expected space before setting wallpaper
-        wait_for_space "$EXPECTED_SPACE"
-
-        echo "Setting wallpaper $((i+1))/${#FILES[@]}: $(basename "$FILE")"
-        osascript -e "tell application \"System Events\" to set picture of current desktop to \"$FILE\""
+        "$HS_CLI" -c "return wp.gotoSpace($TARGET_SPACE)" 2>/dev/null
         sleep 0.3
 
-        if [ $i -lt $((${#FILES[@]} - 1)) ]; then
-            osascript -e 'tell application "System Events" to key code 124 using control down'
-            sleep 0.3
-        fi
+        SUFFIXED=$(cache_bust "$FILE")
+        cp "$FILE" "$SUFFIXED"
+        echo "Setting wallpaper $((i+1))/${#FILES[@]}: $(basename "$SUFFIXED")"
+        osascript -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
+        sleep 0.3
     done
 
     # Return to original space
-    FINAL_SPACE=${#FILES[@]}
-    STEPS_BACK=$((FINAL_SPACE - CURRENT_SPACE))
-    if [ "$STEPS_BACK" -gt 0 ]; then
-        for ((i = 0; i < STEPS_BACK; i++)); do
-            osascript -e 'tell application "System Events" to key code 123 using control down'
-            sleep 0.3
-        done
-    fi
+    "$HS_CLI" -c "return wp.gotoSpace($CURRENT_SPACE)" 2>/dev/null
 
     gum style --foreground 46 "✅ All wallpapers applied!"
     exit 0
@@ -169,10 +158,20 @@ WORKSPACE_CONFIG=$(jq -r --arg search "$WORKSPACE_ID" '
         index: (.key + 1),
         bgColor: (.value.bgColor // $defaults.bgColor // "#000000"),
         textColor: (.value.textColor // $defaults.textColor // "#ffffff"),
-        description: .value.description
+        description: .value.description,
+        borderText: (.value.borderText // $defaults.borderText // true),
+        watermark: (.value.watermark // $defaults.watermark // true),
+        borderOpacity: (.value.borderOpacity // $defaults.borderOpacity // null),
+        watermarkOpacity: (.value.watermarkOpacity // $defaults.watermarkOpacity // null),
+        gradientOpacity: (.value.gradientOpacity // $defaults.gradientOpacity // null)
     } |
     "NAME:\(.name)\nID:\(.id)\nINDEX:\(.index)\nBGCOLOR:\(.bgColor)\nTEXTCOLOR:\(.textColor)" +
-    (if .description then "\nDESC:\(.description)" else "" end)
+    (if .description then "\nDESC:\(.description)" else "" end) +
+    "\nBORDERTEXT:\(.borderText)" +
+    "\nWATERMARK:\(.watermark)" +
+    (if .borderOpacity then "\nBORDEROPACITY:\(.borderOpacity)" else "" end) +
+    (if .watermarkOpacity then "\nWATERMARKOPACITY:\(.watermarkOpacity)" else "" end) +
+    (if .gradientOpacity then "\nGRADIENTOPACITY:\(.gradientOpacity)" else "" end)
 ' "$CONFIG_FILE")
 
 if [ -z "$WORKSPACE_CONFIG" ]; then
@@ -187,18 +186,40 @@ WS_INDEX=$(echo "$WORKSPACE_CONFIG" | grep "^INDEX:" | cut -d: -f2-)
 WS_BGCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^BGCOLOR:" | cut -d: -f2-)
 WS_TEXTCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^TEXTCOLOR:" | cut -d: -f2-)
 WS_DESC=$(echo "$WORKSPACE_CONFIG" | grep "^DESC:" | cut -d: -f2-)
+WS_BORDERTEXT=$(echo "$WORKSPACE_CONFIG" | grep "^BORDERTEXT:" | cut -d: -f2-)
+WS_WATERMARK=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARK:" | cut -d: -f2-)
+WS_BORDEROPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^BORDEROPACITY:" | cut -d: -f2-)
+WS_WATERMARKOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARKOPACITY:" | cut -d: -f2-)
+WS_GRADIENTOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^GRADIENTOPACITY:" | cut -d: -f2-)
 
 # Build generate.swift args
 GEN_ARGS=("$WS_NAME" "--id" "$WS_ID" "--index" "$WS_INDEX" "--bg-color" "$WS_BGCOLOR" "--text-color" "$WS_TEXTCOLOR" "--width" "$SCREEN_W" "--height" "$SCREEN_H")
 if [ -n "$WS_DESC" ]; then
     GEN_ARGS+=("-d" "$WS_DESC")
 fi
+if [ "$WS_BORDERTEXT" = "true" ]; then
+    GEN_ARGS+=("--border-text")
+fi
+if [ "$WS_WATERMARK" = "true" ]; then
+    GEN_ARGS+=("--watermark")
+fi
+if [ -n "$WS_BORDEROPACITY" ]; then
+    GEN_ARGS+=("--border-opacity" "$WS_BORDEROPACITY")
+fi
+if [ -n "$WS_WATERMARKOPACITY" ]; then
+    GEN_ARGS+=("--watermark-opacity" "$WS_WATERMARKOPACITY")
+fi
+if [ -n "$WS_GRADIENTOPACITY" ]; then
+    GEN_ARGS+=("--gradient-opacity" "$WS_GRADIENTOPACITY")
+fi
 
 # Generate just this wallpaper
 echo "Generating: $WS_NAME"
 swift src/generate.swift "${GEN_ARGS[@]}" > /dev/null
 
-# Apply
+# Apply with cache busting
 WALLPAPER_PATH="$OUTPUT_DIR/$WS_ID.$WS_INDEX.png"
-osascript -e "tell application \"System Events\" to set picture of current desktop to \"$WALLPAPER_PATH\""
-gum style --foreground 46 "✅ Applied: $(basename "$WALLPAPER_PATH")"
+SUFFIXED=$(cache_bust "$WALLPAPER_PATH")
+cp "$WALLPAPER_PATH" "$SUFFIXED"
+osascript -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
+gum style --foreground 46 "✅ Applied: $(basename "$SUFFIXED")"

@@ -13,8 +13,20 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Require Hammerspoon
+APP_PATH="/Applications/Hammerspoon.app"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 196 "❌ Hammerspoon not running. Run: mise run hammerspoon:setup"
+    exit 1
+fi
+
 # Get current space
-CURRENT=$(swift src/current-space.swift | cut -d'/' -f1)
+CURRENT=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
+if [ -z "$CURRENT" ] || [ "$CURRENT" = "error" ]; then
+    gum style --foreground 196 "❌ Could not get current space from Hammerspoon"
+    exit 1
+fi
 
 TARGET="${usage_name:-$1}"
 
@@ -71,19 +83,9 @@ fi
 mkdir -p "$STATE_DIR"
 echo "$CURRENT" > "$PREVIOUS_FILE"
 
-# Calculate direction and steps
-if [ "$TARGET_INDEX" -gt "$CURRENT" ]; then
-    STEPS=$((TARGET_INDEX - CURRENT))
-    # Right arrow = key code 124
-    KEY_CODE=124
-else
-    STEPS=$((CURRENT - TARGET_INDEX))
-    # Left arrow = key code 123
-    KEY_CODE=123
-fi
-
 # Navigate
-for ((i = 0; i < STEPS; i++)); do
-    osascript -e "tell application \"System Events\" to key code $KEY_CODE using control down"
-    sleep 0.3
-done
+RESULT=$("$HS_CLI" -c "return wp.gotoSpace($TARGET_INDEX)" 2>/dev/null || echo "false")
+if [ "$RESULT" != "true" ]; then
+    gum style --foreground 196 "❌ Failed to navigate to space $TARGET_INDEX"
+    exit 1
+fi

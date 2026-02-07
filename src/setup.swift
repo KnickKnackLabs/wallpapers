@@ -17,12 +17,22 @@ struct Workspace: Codable {
     let resolution: String?
     let width: Int?
     let height: Int?
+    let borderText: Bool?
+    let watermark: Bool?
+    let borderOpacity: Double?
+    let watermarkOpacity: Double?
+    let gradientOpacity: Double?
 }
 
 struct Defaults: Codable {
     let bgColor: String?
     let textColor: String?
     let resolution: String?
+    let borderText: Bool?
+    let watermark: Bool?
+    let borderOpacity: Double?
+    let watermarkOpacity: Double?
+    let gradientOpacity: Double?
 }
 
 // MARK: - Main
@@ -120,6 +130,23 @@ func main() -> Int32 {
             genArgs += ["-r", res]
         }
         // If no resolution specified, generate.swift will use its default (1080p)
+
+        // Decorations (workspace -> defaults -> on by default)
+        if workspace.borderText ?? config.defaults?.borderText ?? true {
+            genArgs += ["--border-text"]
+        }
+        if workspace.watermark ?? config.defaults?.watermark ?? true {
+            genArgs += ["--watermark"]
+        }
+        if let opacity = workspace.borderOpacity ?? config.defaults?.borderOpacity {
+            genArgs += ["--border-opacity", String(opacity)]
+        }
+        if let opacity = workspace.watermarkOpacity ?? config.defaults?.watermarkOpacity {
+            genArgs += ["--watermark-opacity", String(opacity)]
+        }
+        if let opacity = workspace.gradientOpacity ?? config.defaults?.gradientOpacity {
+            genArgs += ["--gradient-opacity", String(opacity)]
+        }
 
         // Run generate.swift
         let process = Process()

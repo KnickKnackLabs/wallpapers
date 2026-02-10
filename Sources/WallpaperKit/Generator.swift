@@ -90,7 +90,10 @@ public func generateWallpaper(
         )
 
     case .perspective:
-        break  // stub
+        drawStylePerspective(
+            context: context, name: name, width: width, height: height,
+            bgColor: bg
+        )
     }
 
     // Title and description rendering (common to all styles)

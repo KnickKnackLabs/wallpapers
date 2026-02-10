@@ -159,6 +159,7 @@ WORKSPACE_CONFIG=$(jq -r --arg search "$WORKSPACE_ID" '
         bgColor: (.value.bgColor // $defaults.bgColor // "#000000"),
         textColor: (.value.textColor // $defaults.textColor // "#ffffff"),
         description: .value.description,
+        style: (.value.style // $defaults.style // "classic"),
         borderText: (.value.borderText // $defaults.borderText // true),
         watermark: (.value.watermark // $defaults.watermark // true),
         borderOpacity: (.value.borderOpacity // $defaults.borderOpacity // null),
@@ -167,6 +168,7 @@ WORKSPACE_CONFIG=$(jq -r --arg search "$WORKSPACE_ID" '
     } |
     "NAME:\(.name)\nID:\(.id)\nINDEX:\(.index)\nBGCOLOR:\(.bgColor)\nTEXTCOLOR:\(.textColor)" +
     (if .description then "\nDESC:\(.description)" else "" end) +
+    "\nSTYLE:\(.style)" +
     "\nBORDERTEXT:\(.borderText)" +
     "\nWATERMARK:\(.watermark)" +
     (if .borderOpacity then "\nBORDEROPACITY:\(.borderOpacity)" else "" end) +
@@ -188,6 +190,7 @@ WS_TEXTCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^TEXTCOLOR:" | cut -d: -f2-)
 WS_DESC=$(echo "$WORKSPACE_CONFIG" | grep "^DESC:" | cut -d: -f2-)
 WS_BORDERTEXT=$(echo "$WORKSPACE_CONFIG" | grep "^BORDERTEXT:" | cut -d: -f2-)
 WS_WATERMARK=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARK:" | cut -d: -f2-)
+WS_STYLE=$(echo "$WORKSPACE_CONFIG" | grep "^STYLE:" | cut -d: -f2-)
 WS_BORDEROPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^BORDEROPACITY:" | cut -d: -f2-)
 WS_WATERMARKOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARKOPACITY:" | cut -d: -f2-)
 WS_GRADIENTOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^GRADIENTOPACITY:" | cut -d: -f2-)
@@ -197,17 +200,21 @@ GEN_ARGS=("$WS_NAME" "--id" "$WS_ID" "--index" "$WS_INDEX" "--bg-color" "$WS_BGC
 if [ -n "$WS_DESC" ]; then
     GEN_ARGS+=("-d" "$WS_DESC")
 fi
-if [ "$WS_BORDERTEXT" = "true" ]; then
-    GEN_ARGS+=("--border-text")
-fi
-if [ "$WS_WATERMARK" = "true" ]; then
-    GEN_ARGS+=("--watermark")
-fi
-if [ -n "$WS_BORDEROPACITY" ]; then
-    GEN_ARGS+=("--border-opacity" "$WS_BORDEROPACITY")
-fi
-if [ -n "$WS_WATERMARKOPACITY" ]; then
-    GEN_ARGS+=("--watermark-opacity" "$WS_WATERMARKOPACITY")
+GEN_ARGS+=("--style" "$WS_STYLE")
+# Classic-specific decoration flags
+if [ "$WS_STYLE" = "classic" ]; then
+    if [ "$WS_BORDERTEXT" = "true" ]; then
+        GEN_ARGS+=("--border-text")
+    fi
+    if [ "$WS_WATERMARK" = "true" ]; then
+        GEN_ARGS+=("--watermark")
+    fi
+    if [ -n "$WS_BORDEROPACITY" ]; then
+        GEN_ARGS+=("--border-opacity" "$WS_BORDEROPACITY")
+    fi
+    if [ -n "$WS_WATERMARKOPACITY" ]; then
+        GEN_ARGS+=("--watermark-opacity" "$WS_WATERMARKOPACITY")
+    fi
 fi
 if [ -n "$WS_GRADIENTOPACITY" ]; then
     GEN_ARGS+=("--gradient-opacity" "$WS_GRADIENTOPACITY")

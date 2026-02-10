@@ -17,6 +17,7 @@ struct Workspace: Codable {
     let resolution: String?
     let width: Int?
     let height: Int?
+    let style: String?
     let borderText: Bool?
     let watermark: Bool?
     let borderOpacity: Double?
@@ -28,6 +29,7 @@ struct Defaults: Codable {
     let bgColor: String?
     let textColor: String?
     let resolution: String?
+    let style: String?
     let borderText: Bool?
     let watermark: Bool?
     let borderOpacity: Double?
@@ -131,18 +133,24 @@ func main() -> Int32 {
         }
         // If no resolution specified, generate.swift will use its default (1080p)
 
-        // Decorations (workspace -> defaults -> on by default)
-        if workspace.borderText ?? config.defaults?.borderText ?? true {
-            genArgs += ["--border-text"]
-        }
-        if workspace.watermark ?? config.defaults?.watermark ?? true {
-            genArgs += ["--watermark"]
-        }
-        if let opacity = workspace.borderOpacity ?? config.defaults?.borderOpacity {
-            genArgs += ["--border-opacity", String(opacity)]
-        }
-        if let opacity = workspace.watermarkOpacity ?? config.defaults?.watermarkOpacity {
-            genArgs += ["--watermark-opacity", String(opacity)]
+        // Style (workspace -> defaults -> classic)
+        let style = workspace.style ?? config.defaults?.style ?? "classic"
+        genArgs += ["--style", style]
+
+        // Classic-specific decorations (only relevant for classic style)
+        if style == "classic" {
+            if workspace.borderText ?? config.defaults?.borderText ?? true {
+                genArgs += ["--border-text"]
+            }
+            if workspace.watermark ?? config.defaults?.watermark ?? true {
+                genArgs += ["--watermark"]
+            }
+            if let opacity = workspace.borderOpacity ?? config.defaults?.borderOpacity {
+                genArgs += ["--border-opacity", String(opacity)]
+            }
+            if let opacity = workspace.watermarkOpacity ?? config.defaults?.watermarkOpacity {
+                genArgs += ["--watermark-opacity", String(opacity)]
+            }
         }
         if let opacity = workspace.gradientOpacity ?? config.defaults?.gradientOpacity {
             genArgs += ["--gradient-opacity", String(opacity)]

@@ -83,12 +83,22 @@ else
     TEXT_COLOR=$(echo "$TEXT_COLOR" | cut -d' ' -f1)
 fi
 
+# Select visual style
+STYLE=$(gum choose --header "Visual style:" \
+    "classic" \
+    "diagonal" \
+    "tiled" \
+    "flowfield" \
+    "typography" \
+    "perspective")
+
 # Build and run Swift generator
 gum spin --spinner dot --title "Generating wallpaper..." -- \
     swift src/generate.swift "$NAME" \
         $RES_ARGS \
         --bg-color "$BG_COLOR" \
         --text-color "$TEXT_COLOR" \
+        --style "$STYLE" \
         $DESC_ARG ${DESCRIPTION:+"$DESCRIPTION"}
 
 gum style --foreground 46 "✅ Wallpaper generated! Saved to $OUTPUT_DIR"

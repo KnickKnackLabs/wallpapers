@@ -10,6 +10,17 @@ import CoreText
 import UniformTypeIdentifiers
 import ImageIO
 
+// MARK: - Style System
+
+enum WallpaperStyle: String {
+    case classic
+    case diagonal
+    case tiled
+    case flowfield
+    case typography
+    case perspective
+}
+
 // MARK: - Resolution Presets
 
 let resolutions: [String: (width: Int, height: Int)] = [
@@ -182,6 +193,160 @@ func drawBorderText(
     context.restoreGState()
 }
 
+// MARK: - Style Renderers
+
+/// Diagonal style: Tiled text at an angle across the entire canvas.
+/// Creates a luxury fashion-brand pattern (like a monogram wallpaper).
+func drawStyleDiagonal(
+    context: CGContext, name: String, width: Int, height: Int,
+    bgColor: (r: CGFloat, g: CGFloat, b: CGFloat)
+) {
+    let fontSize = CGFloat(max(24, height / 30))
+    let font = CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil)
+    let dc = decorationColor(bgColor)
+
+    let text = name.uppercased()
+
+    // Spacing between text instances (measured from sharp pass)
+    let sharpColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.12)
+    let sharpAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: sharpColor]
+    let sharpAttrString = NSAttributedString(string: text, attributes: sharpAttrs)
+    let sharpLine = CTLineCreateWithAttributedString(sharpAttrString)
+    let bounds = CTLineGetBoundsWithOptions(sharpLine, [])
+    let textWidth = bounds.width
+    let textHeight = bounds.height
+
+    let hSpacing = textWidth * 1.8
+    let vSpacing = textHeight * 2.5
+
+    // Angle: 30 degrees
+    let angle: CGFloat = 30.0 * .pi / 180.0
+
+    // Cover the full canvas after rotation - use diagonal for safety
+    let diagonal = sqrt(CGFloat(width * width + height * height))
+    let cols = Int(ceil(diagonal / hSpacing)) + 2
+    let rows = Int(ceil(diagonal / vSpacing)) + 2
+
+    let startX = -CGFloat(cols) * hSpacing / 2
+    let startY = -CGFloat(rows) * vSpacing / 2
+
+    // Glow pass attributes
+    let glowColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.06)
+    let glowAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: glowColor]
+    let glowAttrString = NSAttributedString(string: text, attributes: glowAttrs)
+    let glowLine = CTLineCreateWithAttributedString(glowAttrString)
+
+    // Pass 1: Soft glow - blurred shadow creates a halo behind each instance
+    context.saveGState()
+    context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+    context.rotate(by: angle)
+    context.setShadow(offset: .zero, blur: 8,
+                      color: CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.15))
+
+    for row in 0..<rows {
+        let rowOffset: CGFloat = (row % 2 == 0) ? 0 : hSpacing / 2
+        for col in 0..<cols {
+            let x = startX + CGFloat(col) * hSpacing + rowOffset
+            let y = startY + CGFloat(row) * vSpacing
+            context.textPosition = CGPoint(x: x - textWidth / 2, y: y - textHeight / 2)
+            CTLineDraw(glowLine, context)
+        }
+    }
+    context.restoreGState()
+
+    // Pass 2: Sharp text on top
+    context.saveGState()
+    context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+    context.rotate(by: angle)
+
+    for row in 0..<rows {
+        let rowOffset: CGFloat = (row % 2 == 0) ? 0 : hSpacing / 2
+        for col in 0..<cols {
+            let x = startX + CGFloat(col) * hSpacing + rowOffset
+            let y = startY + CGFloat(row) * vSpacing
+            context.textPosition = CGPoint(x: x - textWidth / 2, y: y - textHeight / 2)
+            CTLineDraw(sharpLine, context)
+        }
+    }
+    context.restoreGState()
+}
+
+/// Tiled style: Text rotated sideways, packed tight, wall-to-wall coverage.
+/// Dense typographic texture filling the entire canvas.
+func drawStyleTiled(
+    context: CGContext, name: String, width: Int, height: Int,
+    bgColor: (r: CGFloat, g: CGFloat, b: CGFloat)
+) {
+    let fontSize = CGFloat(max(18, height / 40))
+    let font = CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil)
+    let dc = decorationColor(bgColor)
+
+    let text = name.uppercased()
+
+    // Measure text
+    let measureColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 1.0)
+    let measureAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: measureColor]
+    let measureStr = NSAttributedString(string: text, attributes: measureAttrs)
+    let measureLine = CTLineCreateWithAttributedString(measureStr)
+    let bounds = CTLineGetBoundsWithOptions(measureLine, [])
+    let textWidth = bounds.width
+    let textHeight = bounds.height
+
+    // Tight spacing - just enough gap to breathe
+    let hSpacing = textWidth * 1.15
+    let vSpacing = textHeight * 1.4
+
+    // Steep angle - nearly sideways
+    let angle: CGFloat = 75.0 * .pi / 180.0
+
+    let diagonal = sqrt(CGFloat(width * width + height * height))
+    let cols = Int(ceil(diagonal / hSpacing)) + 2
+    let rows = Int(ceil(diagonal / vSpacing)) + 2
+
+    let startX = -CGFloat(cols) * hSpacing / 2
+    let startY = -CGFloat(rows) * vSpacing / 2
+
+    // Glow pass
+    let glowColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.05)
+    let glowAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: glowColor]
+    let glowLine = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: glowAttrs))
+
+    context.saveGState()
+    context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+    context.rotate(by: angle)
+    context.setShadow(offset: .zero, blur: 6,
+                      color: CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.12))
+
+    for row in 0..<rows {
+        for col in 0..<cols {
+            let x = startX + CGFloat(col) * hSpacing
+            let y = startY + CGFloat(row) * vSpacing
+            context.textPosition = CGPoint(x: x - textWidth / 2, y: y - textHeight / 2)
+            CTLineDraw(glowLine, context)
+        }
+    }
+    context.restoreGState()
+
+    // Sharp pass
+    let sharpColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: 0.10)
+    let sharpAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: sharpColor]
+    let sharpLine = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: sharpAttrs))
+
+    context.saveGState()
+    context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+    context.rotate(by: angle)
+
+    for row in 0..<rows {
+        for col in 0..<cols {
+            let x = startX + CGFloat(col) * hSpacing
+            let y = startY + CGFloat(row) * vSpacing
+            context.textPosition = CGPoint(x: x - textWidth / 2, y: y - textHeight / 2)
+            CTLineDraw(sharpLine, context)
+        }
+    }
+    context.restoreGState()
+}
+
 // MARK: - Wallpaper Generation
 
 func generateWallpaper(
@@ -194,6 +359,7 @@ func generateWallpaper(
     workspaceId: String?,
     spaceIndex: Int?,
     outputDir: String,
+    style: WallpaperStyle = .classic,
     enableWatermark: Bool = false,
     watermarkOpacity: CGFloat = 0.08,
     enableBorderText: Bool = false,
@@ -227,21 +393,38 @@ func generateWallpaper(
     context.setFillColor(red: bg.r, green: bg.g, blue: bg.b, alpha: 1.0)
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 
-    // Draw decorations (behind main title)
-    if enableWatermark {
-        drawWatermark(
-            context: context, name: name, width: width, height: height,
-            bgColor: bg, opacity: watermarkOpacity
-        )
-    }
-
+    // Draw style-specific decorations (behind main title)
     let margin: CGFloat = CGFloat(max(40, height / 25))
 
-    if enableBorderText {
-        drawBorderText(
+    switch style {
+    case .classic:
+        if enableWatermark {
+            drawWatermark(
+                context: context, name: name, width: width, height: height,
+                bgColor: bg, opacity: watermarkOpacity
+            )
+        }
+        if enableBorderText {
+            drawBorderText(
+                context: context, name: name, width: width, height: height,
+                bgColor: bg, opacity: borderOpacity, margin: margin
+            )
+        }
+
+    case .diagonal:
+        drawStyleDiagonal(
             context: context, name: name, width: width, height: height,
-            bgColor: bg, opacity: borderOpacity, margin: margin
+            bgColor: bg
         )
+
+    case .tiled:
+        drawStyleTiled(
+            context: context, name: name, width: width, height: height,
+            bgColor: bg
+        )
+
+    case .flowfield, .typography, .perspective:
+        break  // stubs - to be implemented
     }
 
     // Calculate font sizes based on resolution
@@ -416,7 +599,9 @@ func printUsage() {
       --id <slug>                 Workspace ID for filename (default: derived from name)
       --index <n>                 Space index for filename (e.g., 1, 2, 3)
       -o, --output-dir <path>     Output directory (default: ~/.local/share/wallpapers)
-      --watermark                 Add diagonal watermark text
+      --style <name>              Visual style: classic, diagonal, tiled,
+                                  flowfield, typography, perspective (default: classic)
+      --watermark                 Add diagonal watermark text (classic style)
       --watermark-opacity <n>     Watermark opacity 0.0-1.0 (default: 0.08)
       --border-text               Add repeated text around border
       --border-opacity <n>        Border text opacity 0.0-1.0 (default: 0.15)
@@ -440,6 +625,7 @@ func main() -> Int32 {
     var workspaceId: String?
     var spaceIndex: Int?
     var outputDir = NSString(string: "~/.local/share/wallpapers").expandingTildeInPath
+    var style: WallpaperStyle = .classic
     var enableWatermark = false
     var watermarkOpacity: CGFloat = 0.08
     var enableBorderText = false
@@ -491,6 +677,12 @@ func main() -> Int32 {
         case "-o", "--output-dir":
             i += 1
             if i < args.count { outputDir = args[i] }
+
+        case "--style":
+            i += 1
+            if i < args.count, let s = WallpaperStyle(rawValue: args[i]) {
+                style = s
+            }
 
         case "--watermark":
             enableWatermark = true
@@ -552,6 +744,7 @@ func main() -> Int32 {
         workspaceId: workspaceId,
         spaceIndex: spaceIndex,
         outputDir: outputDir,
+        style: style,
         enableWatermark: enableWatermark,
         watermarkOpacity: watermarkOpacity,
         enableBorderText: enableBorderText,

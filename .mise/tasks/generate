@@ -94,7 +94,7 @@ STYLE=$(gum choose --header "Visual style:" \
 
 # Build and run Swift generator
 gum spin --spinner dot --title "Generating wallpaper..." -- \
-    swift src/generate.swift "$NAME" \
+    swift run generate -- "$NAME" \
         $RES_ARGS \
         --bg-color "$BG_COLOR" \
         --text-color "$TEXT_COLOR" \

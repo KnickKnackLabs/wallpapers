@@ -76,7 +76,7 @@ if [ "${usage_all:-}" = "true" ]; then
     fi
 
     # Generate and get file list
-    OUTPUT=$(swift src/setup.swift --width "$SCREEN_W" --height "$SCREEN_H")
+    OUTPUT=$(swift run setup -- --width "$SCREEN_W" --height "$SCREEN_H")
     FILES=()
     while IFS= read -r line; do
         if [[ "$line" == FILE:* ]]; then
@@ -222,7 +222,7 @@ fi
 
 # Generate just this wallpaper
 echo "Generating: $WS_NAME"
-swift src/generate.swift "${GEN_ARGS[@]}" > /dev/null
+swift run generate -- "${GEN_ARGS[@]}" > /dev/null
 
 # Apply with cache busting
 WALLPAPER_PATH="$OUTPUT_DIR/$WS_ID.$WS_INDEX.png"

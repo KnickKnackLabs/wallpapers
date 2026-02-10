@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 #MISE description="Show generator CLI help"
-swift src/generate.swift --help
+swift run generate -- --help

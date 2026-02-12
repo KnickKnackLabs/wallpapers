@@ -14,6 +14,9 @@ public struct RayPoint {
 
 /// Simulate rays radiating from a vanishing point with angular repulsion.
 /// Returns an array of paths (one per ray), where each path is a sequence of RayPoints.
+///
+/// - Parameter obstacles: Fixed repulsive points in the scene (e.g. magnets, walls).
+///   Each inner array is a "body" of points — like a trail but stationary.
 public func simulateRays(
     rayCount: Int,
     baseAngle: CGFloat,
@@ -26,7 +29,8 @@ public func simulateRays(
     maxSteps: Int = 2000,
     margin: CGFloat = 100,
     angularRepulsion: CGFloat = 0.06,
-    repulsionThreshold: CGFloat = .pi / 2
+    repulsionThreshold: CGFloat = .pi / 2,
+    obstacles: [[CGPoint]] = []
 ) -> [[RayPoint]] {
 
     struct RayState {
@@ -116,7 +120,25 @@ public func simulateRays(
                 }
             }
 
-            // Convert trail push into a directional nudge
+            // Obstacle repulsion: same as trail repulsion but for fixed points
+            for obstacle in obstacles {
+                var idx = 0
+                while idx < obstacle.count {
+                    let op = obstacle[idx]
+                    let dx = rays[i].x - op.x
+                    let dy = rays[i].y - op.y
+                    let distSq = dx * dx + dy * dy
+                    if distSq < trailRadius * trailRadius && distSq > 1 {
+                        let dist = sqrt(distSq)
+                        let force = trailStrength * (trailRadius - dist) / trailRadius
+                        trailPushX += (dx / dist) * force
+                        trailPushY += (dy / dist) * force
+                    }
+                    idx += sampleStride
+                }
+            }
+
+            // Convert trail + obstacle push into a directional nudge
             let trailPushMag = sqrt(trailPushX * trailPushX + trailPushY * trailPushY)
             var trailAnglePush: CGFloat = 0
             if trailPushMag > 0.001 {

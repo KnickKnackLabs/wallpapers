@@ -30,6 +30,9 @@ public func simulateRays(
     margin: CGFloat = 100,
     angularRepulsion: CGFloat = 0.06,
     repulsionThreshold: CGFloat = .pi / 2,
+    noiseAmplitude: CGFloat = 1.0,
+    trailRadius: CGFloat = 80,
+    trailStrength: CGFloat = 0.08,
     obstacles: [[CGPoint]] = []
 ) -> [[RayPoint]] {
 
@@ -75,7 +78,7 @@ public func simulateRays(
                 x: rays[i].totalDist * 0.003 + rays[i].noiseOffsetX + 500,
                 y: rays[i].noiseOffsetY + 500
             )
-            let nudge = (n1 - 0.5) * 0.12 + (n2 - 0.5) * 0.04
+            let nudge = ((n1 - 0.5) * 0.12 + (n2 - 0.5) * 0.04) * noiseAmplitude
 
             // Angular repulsion: push directions apart (heads)
             var angularPush: CGFloat = 0
@@ -96,8 +99,6 @@ public func simulateRays(
             }
 
             // Trail repulsion: repel from the entire body of other snakes
-            let trailRadius: CGFloat = 80
-            let trailStrength: CGFloat = 0.08
             var trailPushX: CGFloat = 0
             var trailPushY: CGFloat = 0
             let sampleStride = 5  // Check every 5th trail point for performance
@@ -138,16 +139,14 @@ public func simulateRays(
                 }
             }
 
-            // Convert trail + obstacle push into a directional nudge
-            let trailPushMag = sqrt(trailPushX * trailPushX + trailPushY * trailPushY)
-            var trailAnglePush: CGFloat = 0
-            if trailPushMag > 0.001 {
-                let trailPushAngle = atan2(trailPushY, trailPushX)
-                var diff = trailPushAngle - rays[i].direction
-                while diff > .pi { diff -= 2 * .pi }
-                while diff < -.pi { diff += 2 * .pi }
-                trailAnglePush = diff * min(trailPushMag, 0.15)
-            }
+            // Convert trail + obstacle push into a perpendicular steering nudge.
+            // Only the component of the push perpendicular to the ray's current
+            // direction affects steering — this makes rays deflect *around*
+            // obstacles instead of bouncing backward.
+            let cosD = cos(rays[i].direction)
+            let sinD = sin(rays[i].direction)
+            let perpPush = cosD * trailPushY - sinD * trailPushX  // 2D cross product
+            let trailAnglePush = perpPush
 
             rays[i].direction += nudge + angularPush + trailAnglePush
 

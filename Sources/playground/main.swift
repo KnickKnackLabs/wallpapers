@@ -108,19 +108,119 @@ func renderScenario(
     print("  \(name) → \(outputPath)")
 }
 
+// MARK: - Sweep rendering
+
+/// A single run in a parameter sweep.
+struct SweepRun {
+    let label: String
+    let paths: [[RayPoint]]
+}
+
+/// Render multiple simulation runs overlaid on the same image.
+/// Each run gets a color from a gradient (cool blue → hot red) so you
+/// can see how changing a parameter affects the paths.
+func renderSweep(
+    name: String,
+    runs: [SweepRun],
+    obstacles: [[CGPoint]] = [],
+    vpX: CGFloat, vpY: CGFloat,
+    width: Int = 1920, height: Int = 1080,
+    outputPath: String
+) {
+    let w = CGFloat(width)
+    let h = CGFloat(height)
+
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard let ctx = CGContext(
+        data: nil, width: width, height: height,
+        bitsPerComponent: 8, bytesPerRow: width * 4,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { return }
+
+    // Dark background
+    ctx.setFillColor(CGColor(red: 0.08, green: 0.08, blue: 0.1, alpha: 1))
+    ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+
+    // Draw obstacles
+    for obstacle in obstacles {
+        for pt in obstacle {
+            ctx.setFillColor(CGColor(red: 1, green: 0.3, blue: 0.2, alpha: 0.6))
+            ctx.fillEllipse(in: CGRect(x: pt.x - 4, y: pt.y - 4, width: 8, height: 8))
+        }
+    }
+
+    // Draw each run with a color from blue → red gradient
+    for (runIdx, run) in runs.enumerated() {
+        let t = runs.count > 1 ? CGFloat(runIdx) / CGFloat(runs.count - 1) : 0.5
+        let r = t
+        let g: CGFloat = 0.3 * (1 - t)
+        let b = 1 - t
+
+        let smoothedPaths = run.paths.map { smoothPath($0) }
+        for path in smoothedPaths {
+            guard path.count >= 2 else { continue }
+
+            ctx.setStrokeColor(CGColor(red: r, green: g, blue: b, alpha: 0.7))
+            ctx.setLineWidth(2.0)
+            ctx.beginPath()
+            ctx.move(to: CGPoint(x: path[0].x, y: path[0].y))
+            for i in 1..<path.count {
+                ctx.addLine(to: CGPoint(x: path[i].x, y: path[i].y))
+            }
+            ctx.strokePath()
+        }
+
+        // Label at the end of the first ray
+        if let lastPath = smoothedPaths.first, let tip = lastPath.last {
+            let font = CTFontCreateWithName("Helvetica" as CFString, 11, nil)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: CGColor(red: r, green: g, blue: b, alpha: 0.9)
+            ]
+            let line = CTLineCreateWithAttributedString(
+                NSAttributedString(string: run.label, attributes: attrs))
+            ctx.textPosition = CGPoint(x: tip.x + 5, y: tip.y)
+            CTLineDraw(line, ctx)
+        }
+    }
+
+    // Vanishing point
+    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.8))
+    ctx.fillEllipse(in: CGRect(x: vpX - 5, y: vpY - 5, width: 10, height: 10))
+
+    // Title
+    let font = CTFontCreateWithName("Helvetica" as CFString, 14, nil)
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: font,
+        .foregroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 0.4)
+    ]
+    let line = CTLineCreateWithAttributedString(
+        NSAttributedString(string: name, attributes: attrs))
+    ctx.textPosition = CGPoint(x: 20, y: 20)
+    CTLineDraw(line, ctx)
+
+    // Export
+    guard let image = ctx.makeImage() else { return }
+    let url = URL(fileURLWithPath: outputPath) as CFURL
+    guard let dest = CGImageDestinationCreateWithURL(url, "public.png" as CFString, 1, nil) else { return }
+    CGImageDestinationAddImage(dest, image, nil)
+    CGImageDestinationFinalize(dest)
+    print("  \(name) → \(outputPath)")
+}
+
 // MARK: - Scenarios
 
-/// Single ray aimed right, with a point magnet in its path.
+/// Single ray passing near a point obstacle — classic deflection.
 func scenarioPointMagnet(outputDir: String) {
     let w: CGFloat = 1920, h: CGFloat = 1080
     let vpX = w * 0.1, vpY = h / 2
 
-    // One magnet point right in the ray's path
-    let magnet = CGPoint(x: w * 0.5, y: h / 2)
-    // Dense cluster of points to make a strong repulsive field
-    let obstaclePoints = (0..<20).map { i -> CGPoint in
-        let angle = CGFloat(i) * (2 * .pi / 20)
-        let r: CGFloat = 5
+    // Obstacle sits above the ray's horizontal path
+    let magnet = CGPoint(x: w * 0.5, y: h / 2 - 80)
+    let obstaclePoints = (0..<40).map { i -> CGPoint in
+        let angle = CGFloat(i) * (2 * .pi / 40)
+        let r: CGFloat = 10
         return CGPoint(x: magnet.x + cos(angle) * r, y: magnet.y + sin(angle) * r)
     }
 
@@ -128,12 +228,15 @@ func scenarioPointMagnet(outputDir: String) {
         rayCount: 1, baseAngle: 0,
         vpX: vpX, vpY: vpY, width: w, height: h,
         nameHash: 42,
-        angularRepulsion: 0, // no other rays to repel
+        angularRepulsion: 0,
+        noiseAmplitude: 0,
+        trailRadius: 150,
+        trailStrength: 0.2,
         obstacles: [obstaclePoints]
     )
 
     renderScenario(
-        name: "Point Magnet — single ray deflected by obstacle",
+        name: "Point Magnet — ray passing near obstacle",
         paths: paths, obstacles: [obstaclePoints],
         vpX: vpX, vpY: vpY,
         outputPath: "\(outputDir)/point-magnet.png"
@@ -273,6 +376,86 @@ func scenarioObstacleField(outputDir: String) {
     )
 }
 
+/// Generate N values from 0 to max on a logarithmic scale (plus 0 itself).
+func logRange(from min: CGFloat, to max: CGFloat, count: Int) -> [CGFloat] {
+    guard count > 1 else { return [min] }
+    let logMin = log(Double(Swift.max(min, 0.0001)))
+    let logMax = log(Double(max))
+    return [0] + (0..<count).map { i in
+        let t = Double(i) / Double(count - 1)
+        return CGFloat(exp(logMin + t * (logMax - logMin)))
+    }
+}
+
+/// Standard near-miss obstacle setup for sweep scenarios.
+func nearMissObstacle(w: CGFloat, h: CGFloat) -> (magnet: CGPoint, points: [CGPoint]) {
+    let magnet = CGPoint(x: w * 0.5, y: h / 2 - 80)
+    let points = (0..<40).map { i -> CGPoint in
+        let angle = CGFloat(i) * (2 * .pi / 40)
+        let r: CGFloat = 10
+        return CGPoint(x: magnet.x + cos(angle) * r, y: magnet.y + sin(angle) * r)
+    }
+    return (magnet, points)
+}
+
+/// Sweep: same near-miss, varying repulsive strength.
+func sweepStrength(outputDir: String) {
+    let w: CGFloat = 1920, h: CGFloat = 1080
+    let vpX = w * 0.1, vpY = h / 2
+    let (_, obstaclePoints) = nearMissObstacle(w: w, h: h)
+
+    let strengths = logRange(from: 0.001, to: 200, count: 40)
+    let runs = strengths.map { s -> SweepRun in
+        let paths = simulateRays(
+            rayCount: 1, baseAngle: 0,
+            vpX: vpX, vpY: vpY, width: w, height: h,
+            nameHash: 42,
+            angularRepulsion: 0,
+            noiseAmplitude: 0,
+            trailRadius: 150,
+            trailStrength: s,
+            obstacles: [obstaclePoints]
+        )
+        return SweepRun(label: String(format: "%.3g", Double(s)), paths: paths)
+    }
+
+    renderSweep(
+        name: "Sweep: trail strength (0 → 200, n=\(runs.count))",
+        runs: runs, obstacles: [obstaclePoints],
+        vpX: vpX, vpY: vpY,
+        outputPath: "\(outputDir)/sweep-strength.png"
+    )
+}
+
+/// Sweep: same near-miss, varying repulsive radius.
+func sweepRadius(outputDir: String) {
+    let w: CGFloat = 1920, h: CGFloat = 1080
+    let vpX = w * 0.1, vpY = h / 2
+    let (_, obstaclePoints) = nearMissObstacle(w: w, h: h)
+
+    let radii = logRange(from: 5, to: 1500, count: 40)
+    let runs = radii.map { r -> SweepRun in
+        let paths = simulateRays(
+            rayCount: 1, baseAngle: 0,
+            vpX: vpX, vpY: vpY, width: w, height: h,
+            nameHash: 42,
+            angularRepulsion: 0,
+            noiseAmplitude: 0,
+            trailRadius: r,
+            trailStrength: 0.2,
+            obstacles: [obstaclePoints]
+        )
+        return SweepRun(label: String(format: "r=%.0f", Double(r)), paths: paths)
+    }
+
+    renderSweep(
+        name: "Sweep: trail radius (0 → 1500, n=\(runs.count))",
+        runs: runs, obstacles: [obstaclePoints],
+        vpX: vpX, vpY: vpY,
+        outputPath: "\(outputDir)/sweep-radius.png"
+    )
+}
+
 // MARK: - CLI
 
 let scenarios: [(String, (String) -> Void)] = [
@@ -282,6 +465,8 @@ let scenarios: [(String, (String) -> Void)] = [
     ("corridor", scenarioCorridor),
     ("fan", scenarioFan),
     ("obstacle-field", scenarioObstacleField),
+    ("sweep-strength", sweepStrength),
+    ("sweep-radius", sweepRadius),
 ]
 
 var args = Array(CommandLine.arguments.dropFirst())

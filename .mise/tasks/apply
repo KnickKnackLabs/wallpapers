@@ -43,8 +43,8 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 
 # If --all flag, generate all and apply to all spaces
 if [ "${usage_all:-}" = "true" ]; then
-    # Count workspaces in config
-    CONFIG_COUNT=$(jq '.workspaces | length' "$CONFIG_FILE")
+    # Count spaces in config (new format: .spaces, legacy: .workspaces)
+    CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$CONFIG_FILE")
 
     # Get actual space count
     SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)

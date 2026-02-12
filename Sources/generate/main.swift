@@ -42,6 +42,7 @@ var workspaceId: String?
 var spaceIndex: Int?
 var outputDir = NSString(string: "~/.local/share/wallpapers").expandingTildeInPath
 var style: WallpaperStyle = .classic
+var debugPaths = false
 var enableWatermark = false
 var watermarkOpacity: CGFloat = 0.08
 var enableBorderText = false
@@ -99,6 +100,9 @@ while i < args.count {
             style = s
         }
 
+    case "--debug-paths":
+        debugPaths = true
+
     case "--watermark":
         enableWatermark = true
 
@@ -144,6 +148,13 @@ if let w = customWidth, let h = customHeight {
 } else {
     fputs("Error: Unknown resolution preset '\(resolution)'\n", stderr)
     exit(1)
+}
+
+if debugPaths {
+    let slug = workspaceId ?? workspaceName.lowercased().replacingOccurrences(of: " ", with: "-")
+    let outPath = "\(outputDir)/\(slug)-debug-paths.png"
+    debugDrawPaths(name: workspaceName, width: width, height: height, outputPath: outPath)
+    exit(0)
 }
 
 if let outputPath = generateWallpaper(

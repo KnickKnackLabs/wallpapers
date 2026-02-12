@@ -9,6 +9,7 @@ let package = Package(
         .target(name: "WallpaperKit"),
         .executableTarget(name: "generate", dependencies: ["WallpaperKit"]),
         .executableTarget(name: "setup", dependencies: ["WallpaperKit"]),
+        .executableTarget(name: "playground", dependencies: ["WallpaperKit"]),
         .testTarget(name: "WallpaperKitTests", dependencies: ["WallpaperKit"]),
     ]
 )

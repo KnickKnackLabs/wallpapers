@@ -62,35 +62,72 @@ public func simulateRays(
         if !rays.contains(where: { $0.alive }) { break }
 
         for i in 0..<rayCount where rays[i].alive {
-            // Noise-based gentle curve
-            let noiseVal = noise2D(
-                x: rays[i].totalDist * 0.004 + rays[i].noiseOffsetX,
+            // Noise-based curve: two octaves for broad sweeps + medium detail
+            let n1 = noise2D(
+                x: rays[i].totalDist * 0.001 + rays[i].noiseOffsetX,
                 y: rays[i].noiseOffsetY
             )
-            let nudge = (noiseVal - 0.5) * 0.04
+            let n2 = noise2D(
+                x: rays[i].totalDist * 0.003 + rays[i].noiseOffsetX + 500,
+                y: rays[i].noiseOffsetY + 500
+            )
+            let nudge = (n1 - 0.5) * 0.12 + (n2 - 0.5) * 0.04
 
-            // Angular repulsion: push directions apart
+            // Angular repulsion: push directions apart (heads)
             var angularPush: CGFloat = 0
             let distFromVP = sqrt((rays[i].x - vpX) * (rays[i].x - vpX) +
                                   (rays[i].y - vpY) * (rays[i].y - vpY))
-            // Decay repulsion as rays get further from center (they've already separated)
             let decay = 1.0 / (1.0 + distFromVP * 0.005)
 
             for j in 0..<rayCount where j != i && rays[j].alive {
                 var angleDiff = rays[i].direction - rays[j].direction
-                // Normalize to [-pi, pi]
                 while angleDiff > .pi { angleDiff -= 2 * .pi }
                 while angleDiff < -.pi { angleDiff += 2 * .pi }
 
                 let absDiff = abs(angleDiff)
                 if absDiff < repulsionThreshold && absDiff > 0.001 {
                     let force = angularRepulsion * decay * (repulsionThreshold - absDiff) / repulsionThreshold
-                    // Push away: if angleDiff > 0, push more positive; if < 0, push more negative
                     angularPush += angleDiff > 0 ? force : -force
                 }
             }
 
-            rays[i].direction += nudge + angularPush
+            // Trail repulsion: repel from the entire body of other snakes
+            let trailRadius: CGFloat = 80
+            let trailStrength: CGFloat = 0.08
+            var trailPushX: CGFloat = 0
+            var trailPushY: CGFloat = 0
+            let sampleStride = 5  // Check every 5th trail point for performance
+
+            for j in 0..<rayCount where j != i {
+                let trail = paths[j]
+                var idx = 0
+                while idx < trail.count {
+                    let tp = trail[idx]
+                    let dx = rays[i].x - tp.x
+                    let dy = rays[i].y - tp.y
+                    let distSq = dx * dx + dy * dy
+                    if distSq < trailRadius * trailRadius && distSq > 1 {
+                        let dist = sqrt(distSq)
+                        let force = trailStrength * (trailRadius - dist) / trailRadius
+                        trailPushX += (dx / dist) * force
+                        trailPushY += (dy / dist) * force
+                    }
+                    idx += sampleStride
+                }
+            }
+
+            // Convert trail push into a directional nudge
+            let trailPushMag = sqrt(trailPushX * trailPushX + trailPushY * trailPushY)
+            var trailAnglePush: CGFloat = 0
+            if trailPushMag > 0.001 {
+                let trailPushAngle = atan2(trailPushY, trailPushX)
+                var diff = trailPushAngle - rays[i].direction
+                while diff > .pi { diff -= 2 * .pi }
+                while diff < -.pi { diff += 2 * .pi }
+                trailAnglePush = diff * min(trailPushMag, 0.15)
+            }
+
+            rays[i].direction += nudge + angularPush + trailAnglePush
 
             // Step forward
             rays[i].x += cos(rays[i].direction) * stepSize
@@ -113,6 +150,73 @@ public func simulateRays(
     }
 
     return paths
+}
+
+// MARK: - Path smoothing
+
+/// Smooth a ray path using a moving average over positions.
+/// Preserves totalDist (arc-length) but smooths x, y, and recomputes direction from neighbors.
+public func smoothPath(_ path: [RayPoint], windowSize: Int = 7) -> [RayPoint] {
+    guard path.count > windowSize else { return path }
+    let half = windowSize / 2
+
+    var smoothed: [RayPoint] = []
+    for i in 0..<path.count {
+        let lo = max(0, i - half)
+        let hi = min(path.count - 1, i + half)
+        let count = CGFloat(hi - lo + 1)
+
+        var sumX: CGFloat = 0
+        var sumY: CGFloat = 0
+        for j in lo...hi {
+            sumX += path[j].x
+            sumY += path[j].y
+        }
+
+        let x = sumX / count
+        let y = sumY / count
+
+        // Compute tangent direction from neighbors
+        let prev = max(0, i - 1)
+        let next = min(path.count - 1, i + 1)
+        let angle: CGFloat
+        if next > prev {
+            angle = atan2(path[next].y - path[prev].y, path[next].x - path[prev].x)
+        } else {
+            angle = path[i].direction
+        }
+
+        smoothed.append(RayPoint(x: x, y: y, direction: angle, totalDist: path[i].totalDist))
+    }
+    return smoothed
+}
+
+// MARK: - Path interpolation
+
+/// Query a position and tangent angle at a given arc-length distance along a ray path.
+/// Returns nil if the distance exceeds the path length.
+public func pointAlongPath(_ path: [RayPoint], atDist targetDist: CGFloat) -> (x: CGFloat, y: CGFloat, angle: CGFloat)? {
+    guard path.count >= 2 else { return nil }
+
+    for i in 1..<path.count {
+        let prev = path[i - 1]
+        let curr = path[i]
+
+        if curr.totalDist >= targetDist {
+            // Interpolate between prev and curr
+            let segLen = curr.totalDist - prev.totalDist
+            guard segLen > 0 else { continue }
+            let t = (targetDist - prev.totalDist) / segLen
+
+            let x = prev.x + t * (curr.x - prev.x)
+            let y = prev.y + t * (curr.y - prev.y)
+
+            // Tangent from segment direction
+            let angle = atan2(curr.y - prev.y, curr.x - prev.x)
+            return (x, y, angle)
+        }
+    }
+    return nil
 }
 
 // MARK: - Rendering
@@ -145,32 +249,39 @@ public func drawStylePerspective(
 
     let maxDist = sqrt(w * w + h * h) / 2
 
-    for ray in 0..<rayCount {
-        let pulsePhase = CGFloat(ray) * 1.7 + CGFloat(nameHash % 100) * 0.1
-        var nextPlaceDist: CGFloat = 15
+    // Constant font size with very subtle growth
+    let fontSize = h * 0.012
+    let font = CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil)
 
-        for point in paths[ray] {
-            guard point.totalDist >= nextPlaceDist else { continue }
+    // Measure text width once
+    let measureAttrs: [NSAttributedString.Key: Any] = [
+        .font: font,
+        .foregroundColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+    ]
+    let measureLine = CTLineCreateWithAttributedString(
+        NSAttributedString(string: text, attributes: measureAttrs))
+    let bounds = CTLineGetBoundsWithOptions(measureLine, [])
+    let textWidth = bounds.width
 
-            let depthT = min(point.totalDist / maxDist, 1.0)
+    // Stride: text width + small gap
+    let gap = fontSize * 0.4
+    let stride = textWidth + gap
 
-            // Base size grows with distance, pulsation modulates
-            let baseSize = h * 0.008 + depthT * h * 0.045
-            let pulse = sin(point.totalDist * 0.015 + pulsePhase) * 0.4 + 1.0
-            let fontSize = max(6, baseSize * pulse)
+    // Skip the first bit near the vanishing point where everything converges
+    let startOffset: CGFloat = 30
 
-            let font = CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil)
-            let measureAttrs: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .foregroundColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1)
-            ]
-            let measureLine = CTLineCreateWithAttributedString(
-                NSAttributedString(string: text, attributes: measureAttrs))
-            let bounds = CTLineGetBoundsWithOptions(measureLine, [])
+    let smoothedPaths = paths.map { smoothPath($0) }
 
-            nextPlaceDist = point.totalDist + bounds.width * 0.7
+    for path in smoothedPaths {
+        guard let lastPoint = path.last else { continue }
+        let pathLength = lastPoint.totalDist
 
-            let opacity: CGFloat = 0.03 + depthT * 0.10
+        var dist = startOffset
+        while dist < pathLength {
+            guard let pos = pointAlongPath(path, atDist: dist) else { break }
+
+            let depthT = min(dist / maxDist, 1.0)
+            let opacity: CGFloat = 0.03 + depthT * 0.12
 
             // Glow pass
             let glowColor = CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: opacity * 0.5)
@@ -179,11 +290,11 @@ public func drawStylePerspective(
                 NSAttributedString(string: text, attributes: glowAttrs))
 
             context.saveGState()
-            context.translateBy(x: point.x, y: point.y)
-            context.rotate(by: point.direction)
+            context.translateBy(x: pos.x, y: pos.y)
+            context.rotate(by: pos.angle)
             context.setShadow(offset: .zero, blur: fontSize * 0.15,
                               color: CGColor(red: dc.r, green: dc.g, blue: dc.b, alpha: opacity))
-            context.textPosition = CGPoint(x: -bounds.width / 2, y: -bounds.height / 2)
+            context.textPosition = CGPoint(x: 0, y: -bounds.height / 2)
             CTLineDraw(glowLine, context)
             context.restoreGState()
 
@@ -194,11 +305,13 @@ public func drawStylePerspective(
                 NSAttributedString(string: text, attributes: sharpAttrs))
 
             context.saveGState()
-            context.translateBy(x: point.x, y: point.y)
-            context.rotate(by: point.direction)
-            context.textPosition = CGPoint(x: -bounds.width / 2, y: -bounds.height / 2)
+            context.translateBy(x: pos.x, y: pos.y)
+            context.rotate(by: pos.angle)
+            context.textPosition = CGPoint(x: 0, y: -bounds.height / 2)
             CTLineDraw(sharpLine, context)
             context.restoreGState()
+
+            dist += stride
         }
     }
 }

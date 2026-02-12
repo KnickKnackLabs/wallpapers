@@ -1,9 +1,56 @@
 import Foundation
 import WallpaperKit
 
-// MARK: - Config Models
+// MARK: - Config Models (new format: spaces/zones)
 
-struct Workspace: Codable {
+struct Zone: Codable {
+    let name: String
+    let id: String?
+    let description: String?
+    let flex: Double?
+    let bgColor: String?
+    let textColor: String?
+    let resolution: String?
+    let width: Int?
+    let height: Int?
+    let style: String?
+    let borderText: Bool?
+    let watermark: Bool?
+    let borderOpacity: Double?
+    let watermarkOpacity: Double?
+    let gradientOpacity: Double?
+}
+
+struct Space: Codable {
+    let zones: [Zone]
+    let gap: Double?
+    let cornerRadius: Double?
+    let chromeColor: String?
+}
+
+struct Defaults: Codable {
+    let bgColor: String?
+    let textColor: String?
+    let resolution: String?
+    let style: String?
+    let borderText: Bool?
+    let watermark: Bool?
+    let borderOpacity: Double?
+    let watermarkOpacity: Double?
+    let gradientOpacity: Double?
+    let gap: Double?
+    let cornerRadius: Double?
+    let chromeColor: String?
+}
+
+struct SpaceConfig: Codable {
+    let spaces: [Space]
+    let defaults: Defaults?
+}
+
+// MARK: - Legacy config (backward compat)
+
+struct LegacyWorkspace: Codable {
     let name: String
     let id: String?
     let description: String?
@@ -20,21 +67,54 @@ struct Workspace: Codable {
     let gradientOpacity: Double?
 }
 
-struct Defaults: Codable {
-    let bgColor: String?
-    let textColor: String?
-    let resolution: String?
-    let style: String?
-    let borderText: Bool?
-    let watermark: Bool?
-    let borderOpacity: Double?
-    let watermarkOpacity: Double?
-    let gradientOpacity: Double?
+struct LegacyConfig: Codable {
+    let workspaces: [LegacyWorkspace]
+    let defaults: Defaults?
 }
 
-struct Config: Codable {
-    let workspaces: [Workspace]
-    let defaults: Defaults?
+/// Convert legacy config to new format (each workspace becomes a single-zone space).
+func convertLegacy(_ legacy: LegacyConfig) -> SpaceConfig {
+    let spaces = legacy.workspaces.map { ws -> Space in
+        let zone = Zone(
+            name: ws.name, id: ws.id, description: ws.description,
+            flex: nil,
+            bgColor: ws.bgColor, textColor: ws.textColor,
+            resolution: ws.resolution, width: ws.width, height: ws.height,
+            style: ws.style,
+            borderText: ws.borderText, watermark: ws.watermark,
+            borderOpacity: ws.borderOpacity, watermarkOpacity: ws.watermarkOpacity,
+            gradientOpacity: ws.gradientOpacity
+        )
+        return Space(zones: [zone], gap: nil, cornerRadius: nil, chromeColor: nil)
+    }
+    return SpaceConfig(spaces: spaces, defaults: legacy.defaults)
+}
+
+// MARK: - Zone → ZoneParams helper
+
+func makeZoneParams(zone: Zone, defaults: Defaults?) -> ZoneParams {
+    let bgColorHex = zone.bgColor ?? defaults?.bgColor ?? "#000000"
+    let textColorHex = zone.textColor ?? defaults?.textColor ?? "#ffffff"
+
+    let bg = parseHexColor(bgColorHex) ?? (r: 0, g: 0, b: 0)
+    let text = parseHexColor(textColorHex) ?? (r: 1, g: 1, b: 1)
+
+    let styleName = zone.style ?? defaults?.style ?? "classic"
+    let style = WallpaperStyle(rawValue: styleName) ?? .classic
+
+    let enableWatermark = style == .classic && (zone.watermark ?? defaults?.watermark ?? true)
+    let enableBorderText = style == .classic && (zone.borderText ?? defaults?.borderText ?? true)
+
+    return ZoneParams(
+        name: zone.name, description: zone.description,
+        bgColor: bg, textColor: text,
+        style: style,
+        enableWatermark: enableWatermark,
+        watermarkOpacity: CGFloat(zone.watermarkOpacity ?? defaults?.watermarkOpacity ?? 0.08),
+        enableBorderText: enableBorderText,
+        borderOpacity: CGFloat(zone.borderOpacity ?? defaults?.borderOpacity ?? 0.15),
+        gradientOpacity: CGFloat(zone.gradientOpacity ?? defaults?.gradientOpacity ?? 0.4)
+    )
 }
 
 // MARK: - CLI
@@ -50,6 +130,7 @@ func printUsage() {
       -h, --help          Show this help
 
     Reads config from ~/.config/wallpapers/config.json
+    Supports both new format (spaces/zones) and legacy format (workspaces).
     """)
 }
 
@@ -93,39 +174,46 @@ guard let configData = FileManager.default.contents(atPath: configPath) else {
     exit(1)
 }
 
-let config: Config
+// Try new format first, fall back to legacy
+let config: SpaceConfig
 do {
-    config = try JSONDecoder().decode(Config.self, from: configData)
+    config = try JSONDecoder().decode(SpaceConfig.self, from: configData)
 } catch {
-    fputs("Error: Invalid config JSON - \(error.localizedDescription)\n", stderr)
+    // Try legacy format
+    do {
+        let legacy = try JSONDecoder().decode(LegacyConfig.self, from: configData)
+        config = convertLegacy(legacy)
+    } catch let legacyError {
+        fputs("Error: Invalid config JSON - \(legacyError.localizedDescription)\n", stderr)
+        exit(1)
+    }
+}
+
+if config.spaces.isEmpty {
+    fputs("Error: No spaces defined in config\n", stderr)
     exit(1)
 }
 
-if config.workspaces.isEmpty {
-    fputs("Error: No workspaces defined in config\n", stderr)
-    exit(1)
-}
-
-// Generate wallpapers directly via WallpaperKit
+// Generate wallpapers
+let outputDir = NSString(string: "~/.local/share/wallpapers").expandingTildeInPath
 var generatedFiles: [String] = []
 
-for (index, workspace) in config.workspaces.enumerated() {
-    print("[\(index + 1)/\(config.workspaces.count)] Generating: \(workspace.name)")
+for (index, space) in config.spaces.enumerated() {
+    let zoneNames = space.zones.map(\.name).joined(separator: " + ")
+    print("[\(index + 1)/\(config.spaces.count)] Generating: \(zoneNames)")
 
-    // Colors (workspace -> defaults -> hardcoded)
-    let bgColor = workspace.bgColor ?? config.defaults?.bgColor ?? "#000000"
-    let textColor = workspace.textColor ?? config.defaults?.textColor ?? "#ffffff"
-
-    // Resolution: CLI args > workspace > defaults > 1080p
+    // Resolution: CLI args > first zone > defaults > 1080p
     let width: Int
     let height: Int
     if let w = customWidth, let h = customHeight {
         width = w
         height = h
-    } else if let w = workspace.width, let h = workspace.height {
+    } else if let firstZone = space.zones.first,
+              let w = firstZone.width, let h = firstZone.height {
         width = w
         height = h
-    } else if let res = workspace.resolution ?? config.defaults?.resolution,
+    } else if let firstZone = space.zones.first,
+              let res = firstZone.resolution ?? config.defaults?.resolution,
               let preset = resolutions[res] {
         width = preset.width
         height = preset.height
@@ -134,38 +222,63 @@ for (index, workspace) in config.workspaces.enumerated() {
         height = 1080
     }
 
-    // Style (workspace -> defaults -> classic)
-    let styleName = workspace.style ?? config.defaults?.style ?? "classic"
-    let style = WallpaperStyle(rawValue: styleName) ?? .classic
+    if space.zones.count == 1 {
+        // Single zone — use simple path (no chrome/rounding)
+        let zone = space.zones[0]
+        let params = makeZoneParams(zone: zone, defaults: config.defaults)
 
-    // Classic-specific decorations
-    let enableWatermark = style == .classic && (workspace.watermark ?? config.defaults?.watermark ?? true)
-    let enableBorderText = style == .classic && (workspace.borderText ?? config.defaults?.borderText ?? true)
-    let borderOpacity = workspace.borderOpacity ?? config.defaults?.borderOpacity ?? 0.15
-    let watermarkOpacity = workspace.watermarkOpacity ?? config.defaults?.watermarkOpacity ?? 0.08
-    let gradientOpacity = workspace.gradientOpacity ?? config.defaults?.gradientOpacity ?? 0.4
+        let bgColorHex = zone.bgColor ?? config.defaults?.bgColor ?? "#000000"
+        let textColorHex = zone.textColor ?? config.defaults?.textColor ?? "#ffffff"
 
-    if let path = generateWallpaper(
-        name: workspace.name,
-        description: workspace.description,
-        width: width,
-        height: height,
-        bgColor: bgColor,
-        textColor: textColor,
-        workspaceId: workspace.id,
-        spaceIndex: index + 1,
-        outputDir: NSString(string: "~/.local/share/wallpapers").expandingTildeInPath,
-        style: style,
-        enableWatermark: enableWatermark,
-        watermarkOpacity: CGFloat(watermarkOpacity),
-        enableBorderText: enableBorderText,
-        borderOpacity: CGFloat(borderOpacity),
-        gradientOpacity: CGFloat(gradientOpacity)
-    ) {
-        generatedFiles.append(path)
+        if let path = generateWallpaper(
+            name: zone.name,
+            description: zone.description,
+            width: width,
+            height: height,
+            bgColor: bgColorHex,
+            textColor: textColorHex,
+            workspaceId: zone.id,
+            spaceIndex: index + 1,
+            outputDir: outputDir,
+            style: params.style,
+            enableWatermark: params.enableWatermark,
+            watermarkOpacity: params.watermarkOpacity,
+            enableBorderText: params.enableBorderText,
+            borderOpacity: params.borderOpacity,
+            gradientOpacity: params.gradientOpacity
+        ) {
+            generatedFiles.append(path)
+        } else {
+            fputs("Error generating wallpaper for '\(zone.name)'\n", stderr)
+            exit(1)
+        }
     } else {
-        fputs("Error generating wallpaper for '\(workspace.name)'\n", stderr)
-        exit(1)
+        // Multi-zone — use space wallpaper with flex layout
+        let gap = CGFloat(space.gap ?? config.defaults?.gap ?? 8)
+        let cornerRadius = CGFloat(space.cornerRadius ?? config.defaults?.cornerRadius ?? 10)
+        let chromeColorHex = space.chromeColor ?? config.defaults?.chromeColor ?? "#000000"
+        let chrome = parseHexColor(chromeColorHex) ?? (r: 0, g: 0, b: 0)
+
+        let spaceZones = space.zones.map { zone -> SpaceZone in
+            let params = makeZoneParams(zone: zone, defaults: config.defaults)
+            return SpaceZone(zone: params, flex: CGFloat(zone.flex ?? 1))
+        }
+
+        if let path = generateSpaceWallpaper(
+            zones: spaceZones,
+            width: width,
+            height: height,
+            spaceIndex: index + 1,
+            outputDir: outputDir,
+            gap: gap,
+            cornerRadius: cornerRadius,
+            chromeColor: chrome
+        ) {
+            generatedFiles.append(path)
+        } else {
+            fputs("Error generating space wallpaper\n", stderr)
+            exit(1)
+        }
     }
 }
 

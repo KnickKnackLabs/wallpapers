@@ -456,6 +456,34 @@ func sweepRadius(outputDir: String) {
     )
 }
 
+/// Multi-zone wallpaper test — two zones side by side on ultrawide.
+func scenarioMultiZone(outputDir: String) {
+    let zones: [SpaceZone] = [
+        SpaceZone(zone: ZoneParams(
+            name: "shimmer", description: "Shimmer project",
+            bgColor: (0.424, 0.361, 0.906),  // #6c5ce7
+            textColor: (1, 1, 1),
+            style: .diagonal
+        ), flex: 2),
+        SpaceZone(zone: ZoneParams(
+            name: "fold", description: "Home base",
+            bgColor: (0.455, 0.725, 1.0),  // #74b9ff
+            textColor: (1, 1, 1),
+            style: .tiled
+        ), flex: 1),
+    ]
+
+    let _ = generateSpaceWallpaper(
+        zones: zones,
+        width: 5140, height: 1440,
+        spaceIndex: nil,
+        outputDir: outputDir,
+        gap: 8,
+        cornerRadius: 10
+    )
+    print("  Multi-Zone (5140x1440) → \(outputDir)/shimmer.png")
+}
+
 // MARK: - CLI
 
 let scenarios: [(String, (String) -> Void)] = [
@@ -467,6 +495,7 @@ let scenarios: [(String, (String) -> Void)] = [
     ("obstacle-field", scenarioObstacleField),
     ("sweep-strength", sweepStrength),
     ("sweep-radius", sweepRadius),
+    ("multi-zone", scenarioMultiZone),
 ]
 
 var args = Array(CommandLine.arguments.dropFirst())

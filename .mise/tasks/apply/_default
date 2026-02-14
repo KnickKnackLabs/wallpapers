@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+#MISE description="Apply workspace config (wallpapers, apps, or both)"
+#MISE alias="default"
+#USAGE arg "[name]" help="Workspace name/id to apply (optional - shows picker if omitted)"
+#USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
+#USAGE flag "--wallpapers" help="Only apply wallpapers"
+#USAGE flag "--apps" help="Only launch and position apps"
+#USAGE flag "--clean" help="Close previous app windows before applying"
+set -e
+
+OUTPUT_DIR="$HOME/.local/share/wallpapers"
+CONFIG_FILE="$HOME/.config/wallpapers/config.json"
+BUTTHAIR_DIR="$HOME/agents/brownie/butthair"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    gum style --foreground 196 "❌ Config not found. Run: mise run config:init"
+    exit 1
+fi
+
+# Require Hammerspoon
+APP_PATH="/Applications/Hammerspoon.app"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 196 "❌ Hammerspoon not running. Run: mise run hammerspoon:setup"
+    exit 1
+fi
+
+# Determine what to apply (default: both)
+DO_WALLPAPERS=true
+DO_APPS=true
+if [ "${usage_wallpapers:-}" = "true" ] || [ "${usage_apps:-}" = "true" ]; then
+    DO_WALLPAPERS="${usage_wallpapers:-false}"
+    DO_APPS="${usage_apps:-false}"
+fi
+
+# Alternate wallpaper filename suffix to bust macOS cache.
+cache_bust() {
+    local base="${1%.png}"
+    if [ -f "${base}.a.png" ]; then
+        rm -f "${base}.a.png"
+        echo "${base}.b.png"
+    else
+        rm -f "${base}.b.png"
+        echo "${base}.a.png"
+    fi
+}
+
+# Auto-detect screen resolution
+SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
+SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+
+# Apply to all spaces
+{
+    CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$CONFIG_FILE")
+
+    SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
+    if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "error" ]; then
+        gum style --foreground 196 "❌ Could not get space count from Hammerspoon"
+        exit 1
+    fi
+
+    if [ "$CONFIG_COUNT" -ne "$SPACE_COUNT" ]; then
+        gum style --foreground 226 "⚠️  Mismatch: config has $CONFIG_COUNT workspaces, but you have $SPACE_COUNT spaces"
+        echo ""
+        if [ "$CONFIG_COUNT" -gt "$SPACE_COUNT" ]; then
+            DIFF=$((CONFIG_COUNT - SPACE_COUNT))
+            gum style --foreground 245 "To add $DIFF space(s):"
+            echo "  1. Open Mission Control (Ctrl+Up or swipe up with 3 fingers)"
+            echo "  2. Hover over the top row and click the '+' button"
+            echo "  3. Repeat until you have $CONFIG_COUNT spaces"
+        else
+            DIFF=$((SPACE_COUNT - CONFIG_COUNT))
+            gum style --foreground 245 "You have $DIFF extra space(s). Either:"
+            echo "  • Add more workspaces to your config: mise run config:edit"
+            echo "  • Or remove spaces: Mission Control → hover space → click X"
+        fi
+        echo ""
+        if ! gum confirm "Continue anyway?"; then
+            exit 0
+        fi
+    fi
+
+    # --- Wallpapers ---
+    if [ "$DO_WALLPAPERS" = "true" ]; then
+        OUTPUT=$(swift run setup -- --width "$SCREEN_W" --height "$SCREEN_H")
+        FILES=()
+        while IFS= read -r line; do
+            if [[ "$line" == FILE:* ]]; then
+                FILES+=("${line#FILE:}")
+            elif [[ "$line" != MODE:* ]]; then
+                echo "$line"
+            fi
+        done <<< "$OUTPUT"
+
+        if [ ${#FILES[@]} -eq 0 ]; then
+            gum style --foreground 196 "❌ No wallpapers to apply"
+            exit 1
+        fi
+
+        gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
+
+        CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
+
+        for i in "${!FILES[@]}"; do
+            FILE="${FILES[$i]}"
+            TARGET_SPACE=$((i + 1))
+            "$HS_CLI" -c "return wp.gotoSpace($TARGET_SPACE)" 2>/dev/null
+            sleep 0.3
+            SUFFIXED=$(cache_bust "$FILE")
+            cp "$FILE" "$SUFFIXED"
+            echo "  wallpaper $((i+1))/${#FILES[@]}: $(basename "$SUFFIXED")"
+            osascript -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
+            sleep 0.3
+        done
+
+        "$HS_CLI" -c "return wp.gotoSpace($CURRENT_SPACE)" 2>/dev/null
+        gum style --foreground 46 "✅ Wallpapers applied"
+    fi
+
+    # --- Apps ---
+    if [ "$DO_APPS" = "true" ]; then
+        # Get screen usable area from Hammerspoon (accounts for menu bar)
+        SCREEN_JSON=$(cd "$BUTTHAIR_DIR" && mise run screen:info -- -j 2>/dev/null)
+        USABLE_W=$(echo "$SCREEN_JSON" | jq '.usable.w')
+        USABLE_H=$(echo "$SCREEN_JSON" | jq '.usable.h')
+        USABLE_Y=$(echo "$SCREEN_JSON" | jq '.usable.y')
+
+        GAP=$(jq '.defaults.gap // 8' "$CONFIG_FILE")
+
+        STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
+        mkdir -p "$(dirname "$STATE_FILE")"
+
+        CURRENT_SPACE=$(cd "$BUTTHAIR_DIR" && mise run spaces:current -- -i 2>/dev/null)
+
+        # Optionally close previous windows first
+        if [ "${usage_clean:-false}" = "true" ] && [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
+            PREV_COUNT=$(grep -c . "$STATE_FILE")
+            gum style --foreground 245 "Closing $PREV_COUNT previous window(s)..."
+            PREV_SPACES=()
+            PREV_WINS=()
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                PREV_SPACES+=("$(echo "$line" | cut -d' ' -f1)")
+                PREV_WINS+=("$(echo "$line" | cut -d' ' -f2)")
+            done < "$STATE_FILE"
+            PREV_LAST_SPACE=""
+            for i in "${!PREV_WINS[@]}"; do
+                if [ "${PREV_SPACES[$i]}" != "$PREV_LAST_SPACE" ]; then
+                    cd "$BUTTHAIR_DIR" && mise run spaces:goto -- "${PREV_SPACES[$i]}" < /dev/null 2>/dev/null || true
+                    sleep 0.3
+                    PREV_LAST_SPACE="${PREV_SPACES[$i]}"
+                fi
+                cd "$BUTTHAIR_DIR" && mise run windows:close -- "${PREV_WINS[$i]}" < /dev/null 2>/dev/null || true
+            done
+        fi
+        : > "$STATE_FILE"
+
+        gum style --foreground 245 "Positioning apps..."
+
+        for s in $(seq 0 $((CONFIG_COUNT - 1))); do
+            SPACE_NUM=$((s + 1))
+            ZONES_JSON=$(jq -c ".spaces[$s].zones" "$CONFIG_FILE")
+            ZONE_COUNT=$(echo "$ZONES_JSON" | jq 'length')
+
+            # Skip spaces with no apps
+            TOTAL_APPS=$(echo "$ZONES_JSON" | jq '[.[] | (.apps // []) | length] | add // 0')
+            [ "$TOTAL_APPS" -eq 0 ] && continue
+
+            # Navigate to this space
+            cd "$BUTTHAIR_DIR" && mise run spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null
+            sleep 0.5
+
+            # Zone bounds math (matches WallpaperKit/Generator.swift)
+            EDGE_GAPS=$((GAP * 2))
+            INNER_GAPS=$(( (ZONE_COUNT - 1) * GAP ))
+            AVAIL_W=$((USABLE_W - EDGE_GAPS - INNER_GAPS))
+            AVAIL_H=$((USABLE_H - GAP * 2))
+            ZONE_Y=$((USABLE_Y + GAP))
+            TOTAL_FLEX=$(echo "$ZONES_JSON" | jq '[.[] | (.flex // 1)] | add')
+
+            OFFSET_X=$GAP
+            for z in $(seq 0 $((ZONE_COUNT - 1))); do
+                FLEX=$(echo "$ZONES_JSON" | jq ".[$z].flex // 1")
+                ZONE_NAME=$(echo "$ZONES_JSON" | jq -r ".[$z].name")
+                APPS_JSON=$(echo "$ZONES_JSON" | jq -c ".[$z].apps // []")
+                APPS_COUNT=$(echo "$APPS_JSON" | jq 'length')
+
+                ZONE_W=$(echo "$AVAIL_W * $FLEX / $TOTAL_FLEX" | bc)
+
+                if [ "$APPS_COUNT" -gt 0 ]; then
+                    for a in $(seq 0 $((APPS_COUNT - 1))); do
+                        APP_NAME=$(echo "$APPS_JSON" | jq -r ".[$a].app")
+                        APP_POS=$(echo "$APPS_JSON" | jq -r ".[$a].position")
+                        APP_WIDTH_FRAC=$(echo "$APPS_JSON" | jq -r ".[$a].width")
+
+                        # Inset windows by gap so the zone wallpaper shows as a border
+                        INSET=$GAP
+
+                        if [ "$APP_POS" = "bottom" ]; then
+                            APP_HEIGHT_FRAC=$(echo "$APPS_JSON" | jq -r ".[$a].height")
+                            # Sub-region: bottom portion of zone
+                            SUB_X=$OFFSET_X
+                            SUB_W=$ZONE_W
+                            SUB_H=$(echo "$AVAIL_H * $APP_HEIGHT_FRAC" | bc)
+                            SUB_Y=$(echo "$ZONE_Y + $AVAIL_H - $SUB_H" | bc)
+                            # Inset all edges
+                            APP_X=$(echo "$SUB_X + $INSET" | bc)
+                            APP_Y=$(echo "$SUB_Y + $INSET" | bc)
+                            APP_W=$(echo "$SUB_W - $INSET * 2" | bc)
+                            APP_H=$(echo "$SUB_H - $INSET * 2" | bc)
+                        elif [ "$APP_POS" = "right" ]; then
+                            # Sub-region: right portion of zone
+                            SUB_W=$(echo "$ZONE_W * $APP_WIDTH_FRAC" | bc)
+                            SUB_X=$(echo "$OFFSET_X + $ZONE_W - $SUB_W" | bc)
+                            SUB_Y=$ZONE_Y
+                            SUB_H=$AVAIL_H
+                            # Inset all edges
+                            APP_X=$(echo "$SUB_X + $INSET" | bc)
+                            APP_Y=$(echo "$SUB_Y + $INSET" | bc)
+                            APP_W=$(echo "$SUB_W - $INSET * 2" | bc)
+                            APP_H=$(echo "$SUB_H - $INSET * 2" | bc)
+                        else
+                            SUB_W=$(echo "$ZONE_W * $APP_WIDTH_FRAC" | bc)
+                            SUB_X=$OFFSET_X
+                            SUB_Y=$ZONE_Y
+                            SUB_H=$AVAIL_H
+                            APP_X=$(echo "$SUB_X + $INSET" | bc)
+                            APP_Y=$(echo "$SUB_Y + $INSET" | bc)
+                            APP_W=$(echo "$SUB_W - $INSET * 2" | bc)
+                            APP_H=$(echo "$SUB_H - $INSET * 2" | bc)
+                        fi
+
+                        echo "  space $SPACE_NUM/$ZONE_NAME: $APP_NAME at x=$APP_X y=$APP_Y ${APP_W}x${APP_H}"
+
+                        # Create a new window on this space
+                        "$HS_CLI" -c "
+local app = hs.application.get('$APP_NAME')
+if not app then
+    hs.application.open('$APP_NAME')
+    return 'launched'
+else
+    app:activate()
+    hs.eventtap.keyStroke({'cmd'}, 'n')
+    return 'new_window'
+end
+" 2>/dev/null
+                        sleep 1
+
+                        # Position the frontmost window and record its ID
+                        WIN_ID=$("$HS_CLI" -c "
+local app = hs.application.get('$APP_NAME')
+if not app then return 'error: app not found' end
+local win = app:focusedWindow()
+if not win then return 'error: no window' end
+win:setFrame(hs.geometry.rect($APP_X, $APP_Y, $APP_W, $APP_H))
+return tostring(win:id())
+" 2>/dev/null)
+                        echo "$SPACE_NUM $WIN_ID" >> "$STATE_FILE"
+                        sleep 0.3
+                    done
+                fi
+
+                OFFSET_X=$((OFFSET_X + ZONE_W + GAP))
+            done
+        done
+
+        cd "$BUTTHAIR_DIR" && mise run spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
+        gum style --foreground 46 "✅ Apps positioned"
+    fi
+
+}
+
+# --- Single workspace picker (legacy) ---
+exit 0
+
+WORKSPACES=$(jq -r '.workspaces | to_entries[] | "\(.key + 1). \(.value.name) [\(.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; "")))]"' "$CONFIG_FILE")
+
+ARG_NAME="${usage_name:-$1}"
+if [ -n "$ARG_NAME" ]; then
+    SELECTION="$ARG_NAME"
+else
+    SELECTION=$(echo -e "All spaces\n$WORKSPACES" | gum choose --header "Apply wallpaper to:")
+    if [ "$SELECTION" = "All spaces" ]; then
+        exec mise run apply --all
+    fi
+fi
+
+if [[ "$SELECTION" =~ \[([^\]]+)\]$ ]]; then
+    WORKSPACE_ID="${BASH_REMATCH[1]}"
+elif [[ "$SELECTION" =~ ^[0-9]+\. ]]; then
+    WORKSPACE_ID=$(echo "$SELECTION" | sed 's/.*\[//' | sed 's/\]//')
+else
+    WORKSPACE_ID=$(echo "$SELECTION" | tr '[:upper:]' '[:lower:]')
+fi
+
+WORKSPACE_CONFIG=$(jq -r --arg search "$WORKSPACE_ID" '
+    .defaults as $defaults |
+    .workspaces | to_entries[] |
+    select(
+        (.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; ""))) == $search
+        or (.value.name | ascii_downcase) == $search
+    ) |
+    {
+        name: .value.name,
+        id: (.value.id // (.value.name | ascii_downcase | gsub(" "; "-") | gsub("[^a-z0-9-]"; ""))),
+        index: (.key + 1),
+        bgColor: (.value.bgColor // $defaults.bgColor // "#000000"),
+        textColor: (.value.textColor // $defaults.textColor // "#ffffff"),
+        description: .value.description,
+        style: (.value.style // $defaults.style // "classic"),
+        borderText: (.value.borderText // $defaults.borderText // true),
+        watermark: (.value.watermark // $defaults.watermark // true),
+        borderOpacity: (.value.borderOpacity // $defaults.borderOpacity // null),
+        watermarkOpacity: (.value.watermarkOpacity // $defaults.watermarkOpacity // null),
+        gradientOpacity: (.value.gradientOpacity // $defaults.gradientOpacity // null)
+    } |
+    "NAME:\(.name)\nID:\(.id)\nINDEX:\(.index)\nBGCOLOR:\(.bgColor)\nTEXTCOLOR:\(.textColor)" +
+    (if .description then "\nDESC:\(.description)" else "" end) +
+    "\nSTYLE:\(.style)" +
+    "\nBORDERTEXT:\(.borderText)" +
+    "\nWATERMARK:\(.watermark)" +
+    (if .borderOpacity then "\nBORDEROPACITY:\(.borderOpacity)" else "" end) +
+    (if .watermarkOpacity then "\nWATERMARKOPACITY:\(.watermarkOpacity)" else "" end) +
+    (if .gradientOpacity then "\nGRADIENTOPACITY:\(.gradientOpacity)" else "" end)
+' "$CONFIG_FILE")
+
+if [ -z "$WORKSPACE_CONFIG" ]; then
+    gum style --foreground 196 "❌ Workspace not found: $WORKSPACE_ID"
+    exit 1
+fi
+
+WS_NAME=$(echo "$WORKSPACE_CONFIG" | grep "^NAME:" | cut -d: -f2-)
+WS_ID=$(echo "$WORKSPACE_CONFIG" | grep "^ID:" | cut -d: -f2-)
+WS_INDEX=$(echo "$WORKSPACE_CONFIG" | grep "^INDEX:" | cut -d: -f2-)
+WS_BGCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^BGCOLOR:" | cut -d: -f2-)
+WS_TEXTCOLOR=$(echo "$WORKSPACE_CONFIG" | grep "^TEXTCOLOR:" | cut -d: -f2-)
+WS_DESC=$(echo "$WORKSPACE_CONFIG" | grep "^DESC:" | cut -d: -f2-)
+WS_BORDERTEXT=$(echo "$WORKSPACE_CONFIG" | grep "^BORDERTEXT:" | cut -d: -f2-)
+WS_WATERMARK=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARK:" | cut -d: -f2-)
+WS_STYLE=$(echo "$WORKSPACE_CONFIG" | grep "^STYLE:" | cut -d: -f2-)
+WS_BORDEROPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^BORDEROPACITY:" | cut -d: -f2-)
+WS_WATERMARKOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^WATERMARKOPACITY:" | cut -d: -f2-)
+WS_GRADIENTOPACITY=$(echo "$WORKSPACE_CONFIG" | grep "^GRADIENTOPACITY:" | cut -d: -f2-)
+
+GEN_ARGS=("$WS_NAME" "--id" "$WS_ID" "--index" "$WS_INDEX" "--bg-color" "$WS_BGCOLOR" "--text-color" "$WS_TEXTCOLOR" "--width" "$SCREEN_W" "--height" "$SCREEN_H")
+if [ -n "$WS_DESC" ]; then
+    GEN_ARGS+=("-d" "$WS_DESC")
+fi
+GEN_ARGS+=("--style" "$WS_STYLE")
+if [ "$WS_STYLE" = "classic" ]; then
+    if [ "$WS_BORDERTEXT" = "true" ]; then
+        GEN_ARGS+=("--border-text")
+    fi
+    if [ "$WS_WATERMARK" = "true" ]; then
+        GEN_ARGS+=("--watermark")
+    fi
+    if [ -n "$WS_BORDEROPACITY" ]; then
+        GEN_ARGS+=("--border-opacity" "$WS_BORDEROPACITY")
+    fi
+    if [ -n "$WS_WATERMARKOPACITY" ]; then
+        GEN_ARGS+=("--watermark-opacity" "$WS_WATERMARKOPACITY")
+    fi
+fi
+if [ -n "$WS_GRADIENTOPACITY" ]; then
+    GEN_ARGS+=("--gradient-opacity" "$WS_GRADIENTOPACITY")
+fi
+
+echo "Generating: $WS_NAME"
+swift run generate -- "${GEN_ARGS[@]}" > /dev/null
+
+WALLPAPER_PATH="$OUTPUT_DIR/$WS_ID.$WS_INDEX.png"
+SUFFIXED=$(cache_bust "$WALLPAPER_PATH")
+cp "$WALLPAPER_PATH" "$SUFFIXED"
+osascript -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
+gum style --foreground 46 "✅ Applied: $(basename "$SUFFIXED")"

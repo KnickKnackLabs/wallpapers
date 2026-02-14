@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+#MISE description="Initial Hammerspoon setup for wp integration"
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_DIR="$HOME/.hammerspoon"
+CONFIG_FILE="$CONFIG_DIR/init.lua"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+
+# Header
+gum style \
+    --foreground 212 --border-foreground 141 --border double \
+    --align center --width 60 --margin "1 2" --padding "1 4" \
+    '🔨 Hammerspoon Setup' \
+    '' \
+    'Advanced workspace management for wp'
+
+echo ""
+
+# Step 1: Installation
+gum style --foreground 141 --bold "Step 1: Installation"
+echo ""
+
+if ! "$SCRIPT_DIR/install"; then
+    gum style --foreground 196 "❌ Installation failed"
+    exit 1
+fi
+
+if [ -d "$APP_PATH" ]; then
+    INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+    gum style --foreground 46 "✅ Hammerspoon $INSTALLED_VERSION installed"
+else
+    gum style --foreground 196 "❌ Installation failed"
+    exit 1
+fi
+
+echo ""
+
+# Step 2: Configuration
+gum style --foreground 141 --bold "Step 2: Configuration"
+echo ""
+
+if ! "$SCRIPT_DIR/config"; then
+    gum style --foreground 196 "❌ Configuration failed"
+    exit 1
+fi
+
+gum style --foreground 46 "✅ wp integration configured"
+
+echo ""
+
+# Step 3: Launch Hammerspoon
+gum style --foreground 141 --bold "Step 3: Launch Hammerspoon"
+echo ""
+
+start_hammerspoon() {
+    open "$APP_PATH"
+    for i in {1..10}; do
+        if pgrep -x "Hammerspoon" > /dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+if pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 46 "✅ Hammerspoon is running"
+else
+    gum style --foreground 245 "Hammerspoon needs to be running to continue."
+    echo ""
+
+    if gum confirm "Launch Hammerspoon now?"; then
+        if start_hammerspoon; then
+            gum style --foreground 46 "✅ Hammerspoon is running"
+        else
+            gum style --foreground 226 "⚠️  Hammerspoon may need manual launch"
+            gum style --foreground 245 "   If you see a security dialog, click 'Open'"
+            echo ""
+            gum confirm "Press enter when Hammerspoon is running..."
+        fi
+    else
+        gum style --foreground 196 "❌ Hammerspoon must be running to continue"
+        exit 1
+    fi
+fi
+
+echo ""
+
+# Step 4: Check accessibility permissions
+gum style --foreground 141 --bold "Step 4: Accessibility Permissions"
+echo ""
+
+check_accessibility() {
+    if [ -x "$HS_CLI" ]; then
+        RESULT=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "error")
+        if [ "$RESULT" = "true" ]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+restart_hammerspoon() {
+    gum spin --spinner dot --title "Restarting Hammerspoon..." -- bash -c '
+        pkill -x Hammerspoon 2>/dev/null || true
+        sleep 1
+    '
+    open "$APP_PATH"
+    sleep 2
+    for i in {1..10}; do
+        if pgrep -x "Hammerspoon" > /dev/null; then
+            sleep 1
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+if check_accessibility; then
+    gum style --foreground 46 "✅ Accessibility permissions enabled"
+else
+    gum style --foreground 226 "⚠️  Accessibility permissions required"
+    echo ""
+    gum style --foreground 245 "Hammerspoon needs accessibility permissions to control windows and spaces."
+    echo ""
+    gum style --foreground 255 "To enable:"
+    echo "  1. Click the Hammerspoon menu bar icon (🔨)"
+    echo "  2. Click 'Preferences...'"
+    echo "  3. Click 'Enable Accessibility'"
+    echo "  4. Toggle Hammerspoon ON in System Settings"
+    echo ""
+
+    gum confirm "Press enter when you've enabled accessibility..."
+
+    echo ""
+    gum style --foreground 245 "Restarting Hammerspoon to apply permissions..."
+    restart_hammerspoon
+
+    if check_accessibility; then
+        gum style --foreground 46 "✅ Accessibility permissions enabled"
+    else
+        gum style --foreground 226 "⚠️  Could not verify accessibility"
+        gum style --foreground 245 "   You may need to restart Hammerspoon manually"
+    fi
+fi
+
+echo ""
+
+# Step 5: Disable space-switching animation
+gum style --foreground 141 --bold "Step 5: Faster Space Switching"
+echo ""
+
+ANIM_KEY="NSAutomaticWindowAnimationsEnabled"
+CURRENT_VAL=$(defaults read -g "$ANIM_KEY" 2>/dev/null || echo "missing")
+
+if [ "$CURRENT_VAL" = "0" ]; then
+    gum style --foreground 46 "✅ Space-switching animation already disabled"
+else
+    gum style --foreground 245 "macOS animates space transitions by default."
+    gum style --foreground 245 "Disabling this makes switching feel instant."
+    echo ""
+    if gum confirm "Disable space-switching animation?"; then
+        defaults write -g "$ANIM_KEY" -bool false
+        gum style --foreground 46 "✅ Animation disabled"
+    else
+        gum style --foreground 245 "Skipped (you can change this later in System Settings)"
+    fi
+fi
+
+echo ""
+
+# Step 6: Verify integration
+gum style --foreground 141 --bold "Step 6: Verify Integration"
+echo ""
+
+if [ -x "$HS_CLI" ]; then
+    SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null || echo "error")
+    CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null || echo "error")
+
+    if [ "$SPACE_COUNT" != "error" ] && [ "$CURRENT_SPACE" != "error" ]; then
+        gum style --foreground 46 "✅ wp integration working!"
+        gum style --foreground 245 "   Current space: $CURRENT_SPACE of $SPACE_COUNT"
+    else
+        gum style --foreground 226 "⚠️  Could not verify wp integration"
+        gum style --foreground 245 "   Try reloading Hammerspoon config (Cmd+Ctrl+R)"
+    fi
+else
+    gum style --foreground 226 "⚠️  Hammerspoon CLI not found"
+    gum style --foreground 245 "   The hs command should be at: $HS_CLI"
+fi
+
+echo ""
+
+# Done!
+gum style \
+    --foreground 46 --border-foreground 46 --border rounded \
+    --align center --width 60 --margin "1 2" --padding "1 4" \
+    '🎉 Hammerspoon Setup Complete!' \
+    '' \
+    'Advanced workspace features are now available'
+
+echo ""
+gum style --foreground 245 "Next steps:"
+echo "  • wp hammerspoon:status  - Check Hammerspoon status"
+echo "  • wp hammerspoon:test    - Test workspace functions"
+echo ""

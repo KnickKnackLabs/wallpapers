@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#MISE description="Check Hammerspoon installation and status"
+set -e
+
+APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_FILE="$HOME/.hammerspoon/init.lua"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+
+echo ""
+gum style --foreground 141 --bold "Hammerspoon Status"
+echo ""
+
+# Installation
+if [ -d "$APP_PATH" ]; then
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+    gum style --foreground 46 "✅ Installed: v$VERSION"
+else
+    gum style --foreground 196 "❌ Not installed"
+    gum style --foreground 245 "   Run: mise run hammerspoon:setup"
+    exit 1
+fi
+
+# Running
+if pgrep -x "Hammerspoon" > /dev/null; then
+    gum style --foreground 46 "✅ Running"
+else
+    gum style --foreground 226 "⚠️  Not running"
+    gum style --foreground 245 "   Start with: open /Applications/Hammerspoon.app"
+fi
+
+# Accessibility
+if [ -x "$HS_CLI" ]; then
+    ACCESSIBLE=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "false")
+    if [ "$ACCESSIBLE" = "true" ]; then
+        gum style --foreground 46 "✅ Accessibility enabled"
+    else
+        gum style --foreground 226 "⚠️  Accessibility not enabled"
+        gum style --foreground 245 "   Enable in Hammerspoon Preferences"
+    fi
+else
+    gum style --foreground 245 "⚪ Accessibility: unknown (CLI not found)"
+fi
+
+# Config
+if [ -f "$CONFIG_FILE" ]; then
+    gum style --foreground 46 "✅ Config exists"
+    if grep -q "wp-integration" "$CONFIG_FILE" 2>/dev/null; then
+        gum style --foreground 46 "✅ wp integration configured"
+    else
+        gum style --foreground 226 "⚠️  wp integration not found in config"
+    fi
+else
+    gum style --foreground 226 "⚠️  No config file"
+    gum style --foreground 245 "   Run: mise run hammerspoon:setup"
+fi
+
+# wp functions
+if [ -x "$HS_CLI" ] && pgrep -x "Hammerspoon" > /dev/null; then
+    echo ""
+    gum style --foreground 141 --bold "Workspace Info"
+
+    SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null || echo "error")
+    CURRENT=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null || echo "error")
+
+    if [ "$SPACE_COUNT" != "error" ]; then
+        gum style --foreground 245 "   Spaces: $CURRENT of $SPACE_COUNT"
+    else
+        gum style --foreground 245 "   Could not query wp functions"
+    fi
+fi
+
+echo ""

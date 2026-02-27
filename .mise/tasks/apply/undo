@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Close windows created by the last 'apply --apps'"
+
+HS_CLI="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
+STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
+
+if ! command -v butthair &>/dev/null; then
+    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
+    exit 1
+fi
+
+if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
+    echo "Nothing to undo."
+    exit 0
+fi
+
+# Read all entries into arrays first (avoids stdin issues with mise run)
+SPACES=()
+WINS=()
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    SPACES+=("$(echo "$line" | cut -d' ' -f1)")
+    WINS+=("$(echo "$line" | cut -d' ' -f2)")
+done < "$STATE_FILE"
+
+echo "Closing ${#WINS[@]} window(s)..."
+
+CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
+LAST_SPACE=""
+
+for i in "${!WINS[@]}"; do
+    SPACE_NUM="${SPACES[$i]}"
+    WIN_ID="${WINS[$i]}"
+
+    if [ "$SPACE_NUM" != "$LAST_SPACE" ]; then
+        "$HS_CLI" -c "return wp.gotoSpace($SPACE_NUM)" 2>/dev/null || true
+        sleep 0.3
+        LAST_SPACE="$SPACE_NUM"
+    fi
+
+    RESULT=$(butthair windows:close -- "$WIN_ID" < /dev/null 2>&1) || true
+    echo "  $RESULT"
+done
+
+"$HS_CLI" -c "return wp.gotoSpace($CURRENT_SPACE)" 2>/dev/null || true
+
+rm -f "$STATE_FILE"
+echo "Done."

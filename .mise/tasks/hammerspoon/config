@@ -4,6 +4,7 @@ set -e
 
 CONFIG_DIR="$HOME/.hammerspoon"
 CONFIG_FILE="$CONFIG_DIR/init.lua"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 mkdir -p "$CONFIG_DIR"
 
@@ -102,6 +103,27 @@ _G.wp = wp
 
 print("wp integration loaded - " .. wp.spaceCount() .. " spaces available")
 INITLUA
+
+# Append hotkey with repo path injected
+cat >> "$CONFIG_FILE" << HOTKEY
+
+--------------------------------------------------
+-- Hotkeys
+--------------------------------------------------
+
+-- Apply wallpapers (Cmd+Ctrl+W)
+hs.hotkey.bind({"cmd", "ctrl"}, "W", function()
+    hs.notify.new({title="Wallpapers", informativeText="Applying..."}):send()
+    local task = hs.task.new("/bin/bash", function(exitCode, stdOut, stdErr)
+        if exitCode == 0 then
+            hs.notify.new({title="Wallpapers", informativeText="Applied"}):send()
+        else
+            hs.notify.new({title="Wallpapers", informativeText="Failed (exit " .. exitCode .. ")"}):send()
+        end
+    end, {"-c", "cd $REPO_DIR && mise run apply --wallpapers"})
+    task:start()
+end)
+HOTKEY
 
 echo "Config written to $CONFIG_FILE"
 

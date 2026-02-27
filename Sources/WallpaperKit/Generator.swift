@@ -98,6 +98,7 @@ public func renderZone(
         )
 
     case .perspective:
+        fputs("Note: perspective style is experimental\n", stderr)
         drawStylePerspective(
             context: context, name: zone.name, width: width, height: height,
             bgColor: bg

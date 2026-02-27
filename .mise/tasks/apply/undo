@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 #MISE description="Close windows created by the last 'apply --apps'"
 
-BUTTHAIR_DIR="$HOME/agents/brownie/butthair"
 HS_CLI="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
 STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
+
+if ! command -v butthair &>/dev/null; then
+    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
+    exit 1
+fi
 
 if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
     echo "Nothing to undo."
@@ -34,7 +38,7 @@ for i in "${!WINS[@]}"; do
         LAST_SPACE="$SPACE_NUM"
     fi
 
-    RESULT=$(cd "$BUTTHAIR_DIR" && mise run windows:close -- "$WIN_ID" < /dev/null 2>&1) || true
+    RESULT=$(butthair windows:close -- "$WIN_ID" < /dev/null 2>&1) || true
     echo "  $RESULT"
 done
 

@@ -4,5 +4,5 @@ public enum WallpaperStyle: String {
     case tiled
     case flowfield
     case typography
-    case perspective
+    case perspective // experimental: ray simulation, may change
 }

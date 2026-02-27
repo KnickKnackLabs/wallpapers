@@ -18,7 +18,8 @@ func printUsage() {
       --index <n>                 Space index for filename (e.g., 1, 2, 3)
       -o, --output-dir <path>     Output directory (default: ~/.local/share/wallpapers)
       --style <name>              Visual style: classic, diagonal, tiled,
-                                  flowfield, typography, perspective (default: classic)
+                                  flowfield, typography, perspective* (default: classic)
+                                  * perspective is experimental
       --watermark                 Add centered watermark text (classic style)
       --watermark-opacity <n>     Watermark opacity 0.0-1.0 (default: 0.08)
       --border-text               Add repeated text around border (classic style)

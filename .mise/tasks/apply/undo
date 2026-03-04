@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Close windows created by the last 'apply --apps'"
 
-HS_CLI="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
 STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
 
 if ! command -v butthair &>/dev/null; then
@@ -25,7 +24,7 @@ done < "$STATE_FILE"
 
 echo "Closing ${#WINS[@]} window(s)..."
 
-CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
+CURRENT_SPACE=$(butthair spaces:current -- -i 2>/dev/null)
 LAST_SPACE=""
 
 for i in "${!WINS[@]}"; do
@@ -33,7 +32,7 @@ for i in "${!WINS[@]}"; do
     WIN_ID="${WINS[$i]}"
 
     if [ "$SPACE_NUM" != "$LAST_SPACE" ]; then
-        "$HS_CLI" -c "return wp.gotoSpace($SPACE_NUM)" 2>/dev/null || true
+        butthair spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null || true
         sleep 0.3
         LAST_SPACE="$SPACE_NUM"
     fi
@@ -42,7 +41,7 @@ for i in "${!WINS[@]}"; do
     echo "  $RESULT"
 done
 
-"$HS_CLI" -c "return wp.gotoSpace($CURRENT_SPACE)" 2>/dev/null || true
+butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null || true
 
 rm -f "$STATE_FILE"
 echo "Done."

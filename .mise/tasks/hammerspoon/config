@@ -111,8 +111,18 @@ local function readPrevious()
     return num
 end
 
+local function ensureDir(path)
+    -- hs.fs.mkdir doesn't create parents, walk up the path
+    local parent = path:match("(.+)/[^/]+$")
+    if parent then
+        local attr = hs.fs.attributes(parent)
+        if not attr then ensureDir(parent) end
+    end
+    hs.fs.mkdir(path)
+end
+
 local function savePrevious(idx)
-    os.execute("mkdir -p '" .. stateDir .. "'")
+    ensureDir(stateDir)
     local f = io.open(previousFile, "w")
     if f then
         f:write(tostring(idx))
@@ -223,6 +233,14 @@ end
 
 --------------------------------------------------------------------------------
 -- Hotkeys
+--
+-- Known conflicts:
+--   Ctrl+Space: macOS input source switcher (System Settings → Keyboard →
+--     Input Sources → "Select the previous input source"). Disable or rebind
+--     the macOS shortcut if you use multiple keyboard layouts.
+--   Ctrl+[: sends ESC in terminals. This binding only fires when a terminal
+--     is NOT focused (Hammerspoon hotkeys are suppressed by most terminal
+--     emulators). If it conflicts, rebind below.
 --------------------------------------------------------------------------------
 
 -- Ctrl+Space — open space chooser

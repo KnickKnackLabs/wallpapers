@@ -82,8 +82,7 @@ mkdir -p "$STATE_DIR"
 echo "$CURRENT" > "$PREVIOUS_FILE"
 
 # Navigate
-RESULT=$(butthair spaces:goto -- "$TARGET_INDEX" 2>/dev/null || echo "error")
-if [[ "$RESULT" == error* ]]; then
+if ! butthair spaces:goto -- "$TARGET_INDEX" 2>/dev/null; then
     gum style --foreground 196 "❌ Failed to navigate to space $TARGET_INDEX"
     exit 1
 fi

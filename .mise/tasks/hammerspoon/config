@@ -19,7 +19,7 @@ fi
 cat > "$WP_MODULE" << 'LUA'
 -- wp workspace integration module
 -- Managed by wallpapers — do not edit manually
--- wp-module: v2
+-- wp-module: v3
 
 local wp = {}
 
@@ -153,40 +153,60 @@ local function colorDot(hexColor, size)
     return img
 end
 
+local function spaceName(space)
+    if space.name then return space.name end
+    if space.zones then
+        local names = {}
+        for _, z in ipairs(space.zones) do
+            table.insert(names, z.name or "?")
+        end
+        return table.concat(names, " + ")
+    end
+    return "?"
+end
+
+local function spaceColor(space)
+    if space.bgColor then return space.bgColor end
+    if space.zones and space.zones[1] then
+        return space.zones[1].bgColor or "#666666"
+    end
+    return "#666666"
+end
+
 local function buildChoices()
     local config = readConfig()
     if not config then return {} end
 
-    local workspaces = config.spaces or config.workspaces
-    if not workspaces then return {} end
+    local spaces = config.spaces or config.workspaces
+    if not spaces then return {} end
 
     local current = wp.currentSpace()
     local choices = {}
 
     -- "Go back" entry if there's a previous space
     local prev = readPrevious()
-    if prev and prev ~= current and prev >= 1 and prev <= #workspaces then
-        local prevWs = workspaces[prev]
+    if prev and prev ~= current and prev >= 1 and prev <= #spaces then
+        local prevSpace = spaces[prev]
         table.insert(choices, {
-            text = hs.styledtext.new("← Back to " .. prevWs.name, {
+            text = hs.styledtext.new("← Back to " .. spaceName(prevSpace), {
                 font = { size = 16 },
                 color = { white = 0.5 },
             }),
-            subText = prevWs.description or "",
-            image = colorDot(prevWs.bgColor or "#666666"),
+            subText = "",
+            image = colorDot(spaceColor(prevSpace)),
             spaceIndex = prev,
         })
     end
 
-    for i, ws in ipairs(workspaces) do
-        local name = ws.name
+    for i, space in ipairs(spaces) do
+        local name = spaceName(space)
         if i == current then
             name = name .. "  ◀"
         end
         table.insert(choices, {
             text = name,
-            subText = ws.description or "",
-            image = colorDot(ws.bgColor or "#666666"),
+            subText = "",
+            image = colorDot(spaceColor(space)),
             spaceIndex = i,
         })
     end

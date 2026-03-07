@@ -19,11 +19,14 @@ fi
 cat > "$WP_MODULE" << 'LUA'
 -- wp workspace integration module
 -- Managed by wallpapers — do not edit manually
--- wp-module: v1
+-- wp-module: v2
 
 local wp = {}
 
--- Get current space number
+--------------------------------------------------------------------------------
+-- Core space helpers
+--------------------------------------------------------------------------------
+
 function wp.currentSpace()
     local screen = hs.screen.mainScreen()
     local spaces = hs.spaces.spacesForScreen(screen)
@@ -36,14 +39,12 @@ function wp.currentSpace()
     return 1
 end
 
--- Get total space count
 function wp.spaceCount()
     local screen = hs.screen.mainScreen()
     local spaces = hs.spaces.spacesForScreen(screen)
     return #spaces
 end
 
--- Go to space by number
 function wp.gotoSpace(num)
     local screen = hs.screen.mainScreen()
     local spaces = hs.spaces.spacesForScreen(screen)
@@ -54,14 +55,12 @@ function wp.gotoSpace(num)
     return false
 end
 
--- Add a new space
 function wp.addSpace()
     local screen = hs.screen.mainScreen()
     hs.spaces.addSpaceToScreen(screen, true)
     return wp.spaceCount()
 end
 
--- Remove last space (careful!)
 function wp.removeSpace()
     local screen = hs.screen.mainScreen()
     local spaces = hs.spaces.spacesForScreen(screen)
@@ -72,7 +71,6 @@ function wp.removeSpace()
     return false
 end
 
--- Move a window to a space
 function wp.moveWindowToSpace(appName, spaceNum)
     local app = hs.application.get(appName)
     if app then
@@ -88,6 +86,185 @@ function wp.moveWindowToSpace(appName, spaceNum)
     end
     return false
 end
+
+--------------------------------------------------------------------------------
+-- Config
+--------------------------------------------------------------------------------
+
+local configPath = os.getenv("HOME") .. "/.config/wallpapers/config.json"
+local stateDir = os.getenv("HOME") .. "/.local/state/wallpapers"
+local previousFile = stateDir .. "/previous-space"
+
+local function readConfig()
+    local f = io.open(configPath, "r")
+    if not f then return nil end
+    local content = f:read("*a")
+    f:close()
+    return hs.json.decode(content)
+end
+
+local function readPrevious()
+    local f = io.open(previousFile, "r")
+    if not f then return nil end
+    local num = tonumber(f:read("*l"))
+    f:close()
+    return num
+end
+
+local function ensureDir(path)
+    -- hs.fs.mkdir doesn't create parents, walk up the path
+    local parent = path:match("(.+)/[^/]+$")
+    if parent then
+        local attr = hs.fs.attributes(parent)
+        if not attr then ensureDir(parent) end
+    end
+    hs.fs.mkdir(path)
+end
+
+local function savePrevious(idx)
+    ensureDir(stateDir)
+    local f = io.open(previousFile, "w")
+    if f then
+        f:write(tostring(idx))
+        f:close()
+    end
+end
+
+--------------------------------------------------------------------------------
+-- Chooser (space picker)
+--------------------------------------------------------------------------------
+
+local chooser = nil
+
+local function colorDot(hexColor, size)
+    size = size or 20
+    local canvas = hs.canvas.new({ x = 0, y = 0, w = size, h = size })
+    canvas:appendElements({
+        type = "circle",
+        center = { x = size / 2, y = size / 2 },
+        radius = size / 2 - 1,
+        fillColor = { hex = hexColor },
+        strokeColor = { white = 0.3, alpha = 0.5 },
+        strokeWidth = 1,
+        action = "fillStroke",
+    })
+    local img = canvas:imageFromCanvas()
+    canvas:delete()
+    return img
+end
+
+local function buildChoices()
+    local config = readConfig()
+    if not config then return {} end
+
+    local workspaces = config.spaces or config.workspaces
+    if not workspaces then return {} end
+
+    local current = wp.currentSpace()
+    local choices = {}
+
+    -- "Go back" entry if there's a previous space
+    local prev = readPrevious()
+    if prev and prev ~= current and prev >= 1 and prev <= #workspaces then
+        local prevWs = workspaces[prev]
+        table.insert(choices, {
+            text = hs.styledtext.new("← Back to " .. prevWs.name, {
+                font = { size = 16 },
+                color = { white = 0.5 },
+            }),
+            subText = prevWs.description or "",
+            image = colorDot(prevWs.bgColor or "#666666"),
+            spaceIndex = prev,
+        })
+    end
+
+    for i, ws in ipairs(workspaces) do
+        local name = ws.name
+        if i == current then
+            name = name .. "  ◀"
+        end
+        table.insert(choices, {
+            text = name,
+            subText = ws.description or "",
+            image = colorDot(ws.bgColor or "#666666"),
+            spaceIndex = i,
+        })
+    end
+
+    return choices
+end
+
+local function onChoice(choice)
+    if not choice then return end
+    local target = choice.spaceIndex
+    -- Defer navigation so the chooser fully dismisses first.
+    -- Without this, hs.spaces.gotoSpace blocks inside the chooser
+    -- callback and triggers IPC recursion warnings.
+    hs.timer.doAfter(0.05, function()
+        local current = wp.currentSpace()
+        if target == current then return end
+        savePrevious(current)
+        wp.gotoSpace(target)
+    end)
+end
+
+local function getChooser()
+    if chooser then
+        chooser:choices(buildChoices)
+        return chooser
+    end
+    chooser = hs.chooser.new(onChoice)
+    chooser:choices(buildChoices)
+    chooser:searchSubText(true)
+    chooser:placeholderText("Go to workspace…")
+    chooser:width(25)
+    chooser:rows(7)
+    chooser:bgDark(true)
+    chooser:fgColor({ white = 1 })
+    chooser:subTextColor({ white = 0.6 })
+    return chooser
+end
+
+function wp.showChooser()
+    local c = getChooser()
+    c:query(nil)
+    c:show()
+end
+
+--------------------------------------------------------------------------------
+-- Hotkeys
+--
+-- Known conflicts:
+--   Ctrl+Space: macOS input source switcher (System Settings → Keyboard →
+--     Input Sources → "Select the previous input source"). Disable or rebind
+--     the macOS shortcut if you use multiple keyboard layouts.
+--   Ctrl+[: sends ESC in terminals. This binding only fires when a terminal
+--     is NOT focused (Hammerspoon hotkeys are suppressed by most terminal
+--     emulators). If it conflicts, rebind below.
+--------------------------------------------------------------------------------
+
+-- Ctrl+Space — open space chooser
+wp._chooserHotkey = hs.hotkey.bind({ "ctrl" }, "space", wp.showChooser)
+
+-- Ctrl+[ — go to previous space (like cd -)
+wp._backHotkey = hs.hotkey.bind({ "ctrl" }, "[", function()
+    local prev = readPrevious()
+    if not prev then return end
+    local current = wp.currentSpace()
+    if prev == current then return end
+    savePrevious(current)
+    wp.gotoSpace(prev)
+end)
+
+--------------------------------------------------------------------------------
+-- Config watcher — rebuild choices when config.json changes
+--------------------------------------------------------------------------------
+
+wp._configWatcher = hs.pathwatcher.new(configPath, function()
+    if chooser then
+        chooser:choices(buildChoices)
+    end
+end):start()
 
 return wp
 LUA

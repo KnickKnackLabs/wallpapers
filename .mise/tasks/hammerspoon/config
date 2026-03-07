@@ -1,33 +1,25 @@
 #!/usr/bin/env bash
-#MISE description="Write Hammerspoon config with wp integration"
+#MISE description="Install wp workspace integration into Hammerspoon config"
 set -e
 
 CONFIG_DIR="$HOME/.hammerspoon"
 CONFIG_FILE="$CONFIG_DIR/init.lua"
+WP_MODULE="$CONFIG_DIR/wp.lua"
+APP_PATH="/Applications/Hammerspoon.app"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
 
-mkdir -p "$CONFIG_DIR"
+# Require butthair to have set up Hammerspoon first
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "error: no Hammerspoon config found" >&2
+    echo "Run 'butthair setup' first to install and configure Hammerspoon" >&2
+    exit 1
+fi
 
-cat > "$CONFIG_FILE" << 'INITLUA'
--- Hammerspoon configuration
--- Managed by wp (wallpapers)
--- wp-integration: v1
-
--- Enable CLI (hs command) - required for wp integration
-require("hs.ipc")
-
--- Reload config with Cmd+Ctrl+R
-hs.hotkey.bind({"cmd", "ctrl"}, "R", function()
-    hs.reload()
-end)
-
--- Notify on config load
-hs.notify.new({title="Hammerspoon", informativeText="Config loaded"}):send()
-
---------------------------------------------------
--- wp workspace integration
--- These functions are called by wp for advanced
--- workspace management features
---------------------------------------------------
+# Write the wp module as a separate file
+cat > "$WP_MODULE" << 'LUA'
+-- wp workspace integration module
+-- Managed by wallpapers — do not edit manually
+-- wp-module: v1
 
 local wp = {}
 
@@ -97,18 +89,24 @@ function wp.moveWindowToSpace(appName, spaceNum)
     return false
 end
 
--- Expose wp functions globally for CLI access
-_G.wp = wp
+return wp
+LUA
 
-print("wp integration loaded - " .. wp.spaceCount() .. " spaces available")
-INITLUA
+# Add require line to init.lua if not already present
+if ! grep -q 'require.*wp' "$CONFIG_FILE" 2>/dev/null; then
+    # Append the require at the end
+    cat >> "$CONFIG_FILE" << 'REQUIRE'
 
-echo "Config written to $CONFIG_FILE"
+-- wp (wallpapers) workspace integration
+_G.wp = require("wp")
+print("wp integration loaded — " .. wp.spaceCount() .. " spaces available")
+REQUIRE
+    echo "wp module installed and registered in init.lua"
+else
+    echo "wp module updated (already registered in init.lua)"
+fi
 
 # Reload config if Hammerspoon is running
-APP_PATH="/Applications/Hammerspoon.app"
-HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
-
 if pgrep -x "Hammerspoon" > /dev/null && [ -x "$HS_CLI" ]; then
     "$HS_CLI" -c "hs.reload()" 2>/dev/null && echo "Config reloaded" || true
 fi

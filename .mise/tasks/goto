@@ -13,18 +13,16 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Require Hammerspoon
-APP_PATH="/Applications/Hammerspoon.app"
-HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
-if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
-    gum style --foreground 196 "❌ Hammerspoon not running. Run: mise run hammerspoon:setup"
+# Require butthair
+if ! command -v butthair &>/dev/null; then
+    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
     exit 1
 fi
 
 # Get current space
-CURRENT=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
-if [ -z "$CURRENT" ] || [ "$CURRENT" = "error" ]; then
-    gum style --foreground 196 "❌ Could not get current space from Hammerspoon"
+CURRENT=$(butthair spaces:current -- -i 2>/dev/null)
+if [ -z "$CURRENT" ] || [ "$CURRENT" = "0" ]; then
+    gum style --foreground 196 "❌ Could not get current space. Is Hammerspoon running? Try: butthair setup"
     exit 1
 fi
 
@@ -84,8 +82,7 @@ mkdir -p "$STATE_DIR"
 echo "$CURRENT" > "$PREVIOUS_FILE"
 
 # Navigate
-RESULT=$("$HS_CLI" -c "return wp.gotoSpace($TARGET_INDEX)" 2>/dev/null || echo "false")
-if [ "$RESULT" != "true" ]; then
+if ! butthair spaces:goto -- "$TARGET_INDEX" 2>/dev/null; then
     gum style --foreground 196 "❌ Failed to navigate to space $TARGET_INDEX"
     exit 1
 fi

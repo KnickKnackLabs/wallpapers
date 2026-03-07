@@ -16,17 +16,17 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Require butthair
+# Require butthair (manages Hammerspoon backend)
 if ! command -v butthair &>/dev/null; then
     gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
     exit 1
 fi
 
-# Require Hammerspoon
+# Require Hammerspoon via butthair
 APP_PATH="/Applications/Hammerspoon.app"
 HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
 if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
-    gum style --foreground 196 "❌ Hammerspoon not running. Run: mise run hammerspoon:setup"
+    gum style --foreground 196 "❌ Hammerspoon not running. Run: butthair setup"
     exit 1
 fi
 
@@ -59,9 +59,9 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 {
     CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$CONFIG_FILE")
 
-    SPACE_COUNT=$("$HS_CLI" -c "return wp.spaceCount()" 2>/dev/null)
-    if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "error" ]; then
-        gum style --foreground 196 "❌ Could not get space count from Hammerspoon"
+    SPACE_COUNT=$(butthair spaces:list -- -j 2>/dev/null | jq 'length')
+    if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "0" ]; then
+        gum style --foreground 196 "❌ Could not get space count from butthair"
         exit 1
     fi
 
@@ -105,12 +105,12 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 
         gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
 
-        CURRENT_SPACE=$("$HS_CLI" -c "return wp.currentSpace()" 2>/dev/null)
+        CURRENT_SPACE=$(butthair spaces:current -- -i 2>/dev/null)
 
         for i in "${!FILES[@]}"; do
             FILE="${FILES[$i]}"
             TARGET_SPACE=$((i + 1))
-            "$HS_CLI" -c "return wp.gotoSpace($TARGET_SPACE)" 2>/dev/null
+            butthair spaces:goto -- "$TARGET_SPACE" < /dev/null 2>/dev/null
             sleep 0.3
             SUFFIXED=$(cache_bust "$FILE")
             cp "$FILE" "$SUFFIXED"
@@ -119,7 +119,7 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
             sleep 0.3
         done
 
-        "$HS_CLI" -c "return wp.gotoSpace($CURRENT_SPACE)" 2>/dev/null
+        butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
         gum style --foreground 46 "✅ Wallpapers applied"
     fi
 

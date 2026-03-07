@@ -270,11 +270,12 @@ return wp
 LUA
 
 # Add require line to init.lua if not already present
-if ! grep -q 'require.*wp' "$CONFIG_FILE" 2>/dev/null; then
+if ! grep -q 'require("wp")' "$CONFIG_FILE" 2>/dev/null; then
     # Append the require at the end
     cat >> "$CONFIG_FILE" << 'REQUIRE'
 
 -- wp (wallpapers) workspace integration
+package.loaded["wp"] = nil
 _G.wp = require("wp")
 print("wp integration loaded — " .. wp.spaceCount() .. " spaces available")
 REQUIRE

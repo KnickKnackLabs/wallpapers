@@ -7,6 +7,7 @@ CONFIG_FILE="$CONFIG_DIR/init.lua"
 WP_MODULE="$CONFIG_DIR/wp.lua"
 APP_PATH="/Applications/Hammerspoon.app"
 HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # Require butthair to have set up Hammerspoon first
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -276,6 +277,22 @@ wp._backHotkey = hs.hotkey.bind({ "ctrl" }, "[", function()
     wp.gotoSpace(prev)
 end)
 
+-- Cmd+Ctrl+W — apply wallpapers
+local repoDir = _G.WP_REPO_DIR
+if repoDir then
+    wp._applyHotkey = hs.hotkey.bind({ "cmd", "ctrl" }, "W", function()
+        hs.notify.new({ title = "Wallpapers", informativeText = "Applying..." }):send()
+        local task = hs.task.new("/bin/zsh", function(exitCode)
+            if exitCode == 0 then
+                hs.notify.new({ title = "Wallpapers", informativeText = "Applied" }):send()
+            else
+                hs.notify.new({ title = "Wallpapers", informativeText = "Failed (exit " .. exitCode .. ")" }):send()
+            end
+        end, { "-l", "-c", "cd '" .. repoDir .. "' && mise run apply --wallpapers" })
+        task:start()
+    end)
+end
+
 --------------------------------------------------------------------------------
 -- Config watcher — rebuild choices when config.json changes
 --------------------------------------------------------------------------------
@@ -292,16 +309,27 @@ LUA
 # Add require line to init.lua if not already present
 if ! grep -q 'require("wp")' "$CONFIG_FILE" 2>/dev/null; then
     # Append the require at the end
-    cat >> "$CONFIG_FILE" << 'REQUIRE'
+    cat >> "$CONFIG_FILE" << REQUIRE
 
 -- wp (wallpapers) workspace integration
+_G.WP_REPO_DIR = "$REPO_DIR"
 package.loaded["wp"] = nil
 _G.wp = require("wp")
 print("wp integration loaded — " .. wp.spaceCount() .. " spaces available")
 REQUIRE
     echo "wp module installed and registered in init.lua"
 else
-    echo "wp module updated (already registered in init.lua)"
+    # Ensure WP_REPO_DIR is set (upgrade path for existing installs)
+    if ! grep -q 'WP_REPO_DIR' "$CONFIG_FILE" 2>/dev/null; then
+        sed -i '' "/package\.loaded\[\"wp\"\] = nil/i\\
+_G.WP_REPO_DIR = \"$REPO_DIR\"
+" "$CONFIG_FILE"
+        echo "wp module updated (added WP_REPO_DIR)"
+    else
+        # Update repo path if it changed
+        sed -i '' "s|_G.WP_REPO_DIR = \".*\"|_G.WP_REPO_DIR = \"$REPO_DIR\"|" "$CONFIG_FILE"
+        echo "wp module updated (already registered in init.lua)"
+    fi
 fi
 
 # Reload config if Hammerspoon is running

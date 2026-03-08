@@ -321,7 +321,9 @@ REQUIRE
 else
     # Ensure WP_REPO_DIR is set (upgrade path for existing installs)
     if ! grep -q 'WP_REPO_DIR' "$CONFIG_FILE" 2>/dev/null; then
-        sed -i '' "s|require(\"wp\")|_G.WP_REPO_DIR = \"$REPO_DIR\"\npackage.loaded[\"wp\"] = nil\n_G.wp = require(\"wp\")|" "$CONFIG_FILE"
+        sed -i '' "/package\.loaded\[\"wp\"\] = nil/i\\
+_G.WP_REPO_DIR = \"$REPO_DIR\"
+" "$CONFIG_FILE"
         echo "wp module updated (added WP_REPO_DIR)"
     else
         # Update repo path if it changed

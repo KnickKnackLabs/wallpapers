@@ -288,7 +288,7 @@ if repoDir then
             else
                 hs.notify.new({ title = "Wallpapers", informativeText = "Failed (exit " .. exitCode .. ")" }):send()
             end
-        end, { "-l", "-c", "cd " .. repoDir .. " && mise run apply --wallpapers" })
+        end, { "-l", "-c", "cd '" .. repoDir .. "' && mise run apply --wallpapers" })
         task:start()
     end)
 end
@@ -319,7 +319,15 @@ print("wp integration loaded — " .. wp.spaceCount() .. " spaces available")
 REQUIRE
     echo "wp module installed and registered in init.lua"
 else
-    echo "wp module updated (already registered in init.lua)"
+    # Ensure WP_REPO_DIR is set (upgrade path for existing installs)
+    if ! grep -q 'WP_REPO_DIR' "$CONFIG_FILE" 2>/dev/null; then
+        sed -i '' "s|require(\"wp\")|_G.WP_REPO_DIR = \"$REPO_DIR\"\npackage.loaded[\"wp\"] = nil\n_G.wp = require(\"wp\")|" "$CONFIG_FILE"
+        echo "wp module updated (added WP_REPO_DIR)"
+    else
+        # Update repo path if it changed
+        sed -i '' "s|_G.WP_REPO_DIR = \".*\"|_G.WP_REPO_DIR = \"$REPO_DIR\"|" "$CONFIG_FILE"
+        echo "wp module updated (already registered in init.lua)"
+    fi
 fi
 
 # Reload config if Hammerspoon is running

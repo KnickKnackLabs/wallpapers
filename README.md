@@ -27,7 +27,7 @@ All from a single config file.
 </div>
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="Four wallpapers side by side: Personal (classic), Code (diagonal), Design (typography), Music (flowfield)" width="800" />
+  <img src="https://placehold.co/1400x400/2d3436/ffffff?text=Personal+%C2%B7+Code+%C2%B7+Design+%C2%B7+Music" alt="Four wallpapers side by side: Personal (classic), Code (diagonal), Design (typography), Music (flowfield)" width="800" />
 </p>
 
 <br />
@@ -44,12 +44,7 @@ This tool generates wallpapers with labels so you always know where you are. But
 
 ```bash
 # Install
-git clone https://github.com/KnickKnackLabs/wallpapers.git ~/wallpapers
-cd ~/wallpapers && mise trust && mise install
-
-# Shell setup
-echo 'eval "$(mise -C ~/wallpapers run -q shell)"' >> ~/.zshrc
-source ~/.zshrc
+shiv install wallpapers --as wp
 
 # Go!
 wp tutorial
@@ -75,7 +70,7 @@ wp goto -         # Go back (like cd -)
 Six built-in styles — from minimal to generative art. Set per-workspace in config or pick interactively with `wp generate`.
 
 <p align="center">
-  <img src="docs/assets/styles.png" alt="Grid showing all six visual styles: classic, diagonal, tiled, typography, flowfield, perspective" width="700" />
+  <img src="https://placehold.co/1400x500/1a1a2e/ffffff?text=classic+%C2%B7+diagonal+%C2%B7+tiled+%C2%B7+typography+%C2%B7+flowfield+%C2%B7+perspective" alt="Grid showing all six visual styles: classic, diagonal, tiled, typography, flowfield, perspective" width="700" />
 </p>
 
 | Style | Description |
@@ -96,7 +91,7 @@ Six built-in styles — from minimal to generative art. Set per-workspace in con
 Split a single wallpaper into zones that mirror how you actually use the desktop. Flex proportions, rounded corners, configurable gaps.
 
 <p align="center">
-  <img src="docs/assets/multi-zone.png" alt="A wallpaper split into two zones: Code (2/3 width, dark blue) and Browser (1/3 width, navy)" width="700" />
+  <img src="https://placehold.co/1400x400/0f3460/ffffff?text=Code+(2%2F3)+%7C+Browser+(1%2F3)" alt="A wallpaper split into two zones: Code (2/3 width, dark blue) and Browser (1/3 width, navy)" width="700" />
 </p>
 
 ```json
@@ -419,4 +414,7 @@ MIT
 macOS doesn't let you name your Spaces.
 <br />
 So we did it ourselves.
+<br />
+<br />
+This README was created using [readme](https://github.com/KnickKnackLabs/readme).
 </sub></div>

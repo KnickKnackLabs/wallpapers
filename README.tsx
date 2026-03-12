@@ -119,8 +119,14 @@ const readme = (
       </Badges>
     </Center>
 
+    {/* TODO: Replace with real hero image (docs/assets/hero.png)
+         wp cli "Personal" --bg-color "#2d3436" --style classic
+         wp cli "Code" --bg-color "#1a1a2e" --style diagonal
+         wp cli "Design" --bg-color "#0f3460" --style typography
+         wp cli "Music" --bg-color "#6c5ce7" --style flowfield
+         Stitch into a single 1400×400 image with perspective tilt. */}
     <Align>
-      <Image src="docs/assets/hero.png" alt="Four wallpapers side by side: Personal (classic), Code (diagonal), Design (typography), Music (flowfield)" width={800} />
+      <Image src="https://placehold.co/1400x400/2d3436/ffffff?text=Personal+%C2%B7+Code+%C2%B7+Design+%C2%B7+Music" alt="Four wallpapers side by side: Personal (classic), Code (diagonal), Design (typography), Music (flowfield)" width={800} />
     </Align>
 
     <LineBreak />
@@ -142,12 +148,7 @@ const readme = (
 
     <Section title="Quick Start">
       <CodeBlock lang="bash">{`# Install
-git clone https://github.com/KnickKnackLabs/wallpapers.git ~/wallpapers
-cd ~/wallpapers && mise trust && mise install
-
-# Shell setup
-echo 'eval "$(mise -C ~/wallpapers run -q shell)"' >> ~/.zshrc
-source ~/.zshrc
+shiv install wallpapers --as wp
 
 # Go!
 wp tutorial`}</CodeBlock>
@@ -172,8 +173,13 @@ wp goto -         # Go back (like cd -)`}</CodeBlock>
         in config or pick interactively with <Code>wp generate</Code>.
       </Paragraph>
 
+      {/* TODO: Replace with real style grid (docs/assets/styles.png)
+           for s in classic diagonal tiled typography flowfield perspective; do
+             wp cli "Code" --bg-color "#1a1a2e" --style $s --resolution 1080p --id "style-$s"
+           done
+           Arrange as 3×2 grid, ~400×250 each. */}
       <Align>
-        <Image src="docs/assets/styles.png" alt="Grid showing all six visual styles: classic, diagonal, tiled, typography, flowfield, perspective" width={700} />
+        <Image src="https://placehold.co/1400x500/1a1a2e/ffffff?text=classic+%C2%B7+diagonal+%C2%B7+tiled+%C2%B7+typography+%C2%B7+flowfield+%C2%B7+perspective" alt="Grid showing all six visual styles: classic, diagonal, tiled, typography, flowfield, perspective" width={700} />
       </Align>
 
       <Table>
@@ -197,8 +203,10 @@ wp goto -         # Go back (like cd -)`}</CodeBlock>
         Flex proportions, rounded corners, configurable gaps.
       </Paragraph>
 
+      {/* TODO: Replace with real multi-zone image (docs/assets/multi-zone.png)
+           Use a 2:1 split config, show inside a macOS window chrome mockup. */}
       <Align>
-        <Image src="docs/assets/multi-zone.png" alt="A wallpaper split into two zones: Code (2/3 width, dark blue) and Browser (1/3 width, navy)" width={700} />
+        <Image src="https://placehold.co/1400x400/0f3460/ffffff?text=Code+(2%2F3)+%7C+Browser+(1%2F3)" alt="A wallpaper split into two zones: Code (2/3 width, dark blue) and Browser (1/3 width, navy)" width={700} />
       </Align>
 
       <CodeBlock lang="json">{`{
@@ -515,7 +523,10 @@ wp ai`}</CodeBlock>
       <Sub>
         macOS doesn't let you name your Spaces.{"\n"}
         <Raw>{"<br />"}</Raw>{"\n"}
-        So we did it ourselves.
+        So we did it ourselves.{"\n"}
+        <Raw>{"<br />"}</Raw>{"\n"}
+        <Raw>{"<br />"}</Raw>{"\n"}
+        This README was created using <Link href="https://github.com/KnickKnackLabs/readme">readme</Link>.
       </Sub>
     </Center>
   </>

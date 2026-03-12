@@ -416,5 +416,5 @@ macOS doesn't let you name your Spaces.
 So we did it ourselves.
 <br />
 <br />
-This README was created using [readme](https://github.com/KnickKnackLabs/readme).
+This README was created using <a href="https://github.com/KnickKnackLabs/readme">readme</a>.
 </sub></div>

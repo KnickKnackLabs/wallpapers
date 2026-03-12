@@ -9,7 +9,7 @@ import {
   Badge, Badges, Center, Details, Section,
   Table, TableHead, TableRow, Cell,
   List, Item,
-  Raw, Sub, Align, HtmlTable, HtmlTr, HtmlTd,
+  Raw, HtmlLink, Sub, Align, HtmlTable, HtmlTr, HtmlTd,
 } from "readme/src/components";
 
 // --- Custom components ---
@@ -526,7 +526,7 @@ wp ai`}</CodeBlock>
         So we did it ourselves.{"\n"}
         <Raw>{"<br />"}</Raw>{"\n"}
         <Raw>{"<br />"}</Raw>{"\n"}
-        This README was created using <Link href="https://github.com/KnickKnackLabs/readme">readme</Link>.
+        This README was created using <HtmlLink href="https://github.com/KnickKnackLabs/readme">readme</HtmlLink>.
       </Sub>
     </Center>
   </>

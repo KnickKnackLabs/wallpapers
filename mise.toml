@@ -1,9 +1,13 @@
 # Mise configuration for wallpaper generator
 # Tasks are auto-discovered from .mise/tasks/
 
+[settings]
+task_output = "interleave"
+
 [tools]
 gum = "latest"
 jq = "latest"
-usage = "latest"  # enables shell completions for task args
+usage = "latest"
+bats = "1.13.0"
 
 # Note: Swift is built-in on macOS, no need to manage it

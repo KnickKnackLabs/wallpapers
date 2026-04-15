@@ -7,20 +7,10 @@
 #USAGE flag "--apps" help="Only launch and position apps"
 #USAGE flag "--clean" help="Close previous app windows before applying"
 set -e
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-OUTPUT_DIR="$HOME/.local/share/wallpapers"
-CONFIG_FILE="$HOME/.config/wallpapers/config.json"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    gum style --foreground 196 "❌ Config not found. Run: mise run config:init"
-    exit 1
-fi
-
-# Require butthair (manages Hammerspoon backend)
-if ! command -v butthair &>/dev/null; then
-    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
-    exit 1
-fi
+require_config
+require_command butthair "Install with: shiv install butthair"
 
 # Require Hammerspoon via butthair
 APP_PATH="/Applications/Hammerspoon.app"
@@ -51,13 +41,13 @@ cache_bust() {
 }
 
 # Auto-detect screen resolution
-SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
-SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
-SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+SCREEN_RES=$(detect_screen_resolution)
+SCREEN_W=$(resolution_width "$SCREEN_RES")
+SCREEN_H=$(resolution_height "$SCREEN_RES")
 
 # Apply to all spaces
 {
-    CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$CONFIG_FILE")
+    CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$WALLPAPERS_CONFIG_FILE")
 
     SPACE_COUNT=$(butthair spaces:list -- -j 2>/dev/null | jq 'length')
     if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "0" ]; then
@@ -131,7 +121,7 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
         USABLE_H=$(echo "$SCREEN_JSON" | jq '.usable.h')
         USABLE_Y=$(echo "$SCREEN_JSON" | jq '.usable.y')
 
-        GAP=$(jq '.defaults.gap // 8' "$CONFIG_FILE")
+        GAP=$(jq '.defaults.gap // 8' "$WALLPAPERS_CONFIG_FILE")
 
         STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
         mkdir -p "$(dirname "$STATE_FILE")"
@@ -165,7 +155,7 @@ SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
 
         for s in $(seq 0 $((CONFIG_COUNT - 1))); do
             SPACE_NUM=$((s + 1))
-            ZONES_JSON=$(jq -c ".spaces[$s].zones" "$CONFIG_FILE")
+            ZONES_JSON=$(jq -c ".spaces[$s].zones" "$WALLPAPERS_CONFIG_FILE")
             ZONE_COUNT=$(echo "$ZONES_JSON" | jq 'length')
 
             # Skip spaces with no apps

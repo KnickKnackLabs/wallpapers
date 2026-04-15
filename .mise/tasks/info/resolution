@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Show your screen resolution"
-SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
+
+SCREEN_RES=$(detect_screen_resolution)
 gum style --foreground 212 "🖥️ Your screen resolution: $SCREEN_RES"
-gum style --foreground 244 "Use 'mise run quick' to auto-generate at this size"
+gum style --foreground 244 "Use 'wallpapers quick' to auto-generate at this size"

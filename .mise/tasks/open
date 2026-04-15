@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Open the wallpapers directory in Finder"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-OUTPUT_DIR="$HOME/.local/share/wallpapers"
-
-mkdir -p "$OUTPUT_DIR"
-open "$OUTPUT_DIR"
+mkdir -p "$WALLPAPERS_OUTPUT_DIR"
+open "$WALLPAPERS_OUTPUT_DIR"

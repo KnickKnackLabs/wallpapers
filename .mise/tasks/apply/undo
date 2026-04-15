@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #MISE description="Close windows created by the last 'apply --apps'"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
+STATE_FILE="$WALLPAPERS_OUTPUT_DIR/.apply-state"
 
-if ! command -v butthair &>/dev/null; then
-    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
-    exit 1
-fi
+require_command butthair "Install with: shiv install butthair"
 
 if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then
     echo "Nothing to undo."

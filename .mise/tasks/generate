@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Generate a wallpaper interactively"
 set -e
-
-OUTPUT_DIR="$HOME/.local/share/wallpapers"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
 # Styled header
 gum style \
@@ -28,9 +27,9 @@ if gum confirm "Add a description?"; then
 fi
 
 # Detect current screen resolution
-SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
-SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
-SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+SCREEN_RES=$(detect_screen_resolution)
+SCREEN_W=$(resolution_width "$SCREEN_RES")
+SCREEN_H=$(resolution_height "$SCREEN_RES")
 
 # Select resolution
 RESOLUTION=$(gum choose --header "📐 Select resolution:" \
@@ -101,7 +100,7 @@ gum spin --spinner dot --title "Generating wallpaper..." -- \
         --style "$STYLE" \
         $DESC_ARG ${DESCRIPTION:+"$DESCRIPTION"}
 
-gum style --foreground 46 "✅ Wallpaper generated! Saved to $OUTPUT_DIR"
+gum style --foreground 46 "✅ Wallpaper generated! Saved to $WALLPAPERS_OUTPUT_DIR"
 
 # Show the generated files
 ls -la "$OUTPUT_DIR"

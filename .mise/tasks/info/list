@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 #MISE description="List generated wallpapers"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-OUTPUT_DIR="$HOME/.local/share/wallpapers"
-
-if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR" 2>/dev/null)" ]; then
+if [ -d "$WALLPAPERS_OUTPUT_DIR" ] && [ "$(ls -A "$WALLPAPERS_OUTPUT_DIR" 2>/dev/null)" ]; then
     gum style --foreground 212 --bold "📁 Generated Wallpapers:"
-    ls -lh "$OUTPUT_DIR"/*.png 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+    ls -lh "$WALLPAPERS_OUTPUT_DIR"/*.png 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
 else
-    gum style --foreground 244 "No wallpapers generated yet. Run 'mise run generate' to create one."
+    gum style --foreground 244 "No wallpapers generated yet. Run 'wallpapers generate' to create one."
 fi

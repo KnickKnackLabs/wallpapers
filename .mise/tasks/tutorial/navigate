@@ -11,7 +11,8 @@ for cmd in gum swift jq; do
 done
 
 # Constants
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# shellcheck disable=SC2154
+SCRIPT_DIR="$MISE_CONFIG_ROOT"
 USER_CONFIG="$HOME/.config/wallpapers/config.json"
 STATE_DIR="$HOME/.local/state/wallpapers"
 ACTIVE_CONFIG_FILE="$STATE_DIR/tutorial-active-config"
@@ -58,7 +59,7 @@ else
 fi
 
 # Get current space info
-SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+SPACE_INFO=$(swift "$MISE_CONFIG_ROOT/src/current-space.swift" 2>/dev/null || echo "1/1")
 CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
 TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
 

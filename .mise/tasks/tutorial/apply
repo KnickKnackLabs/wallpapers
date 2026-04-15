@@ -12,7 +12,8 @@ done
 
 # Constants
 OUTPUT_DIR="$HOME/.local/share/wallpapers"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# shellcheck disable=SC2154
+SCRIPT_DIR="$MISE_CONFIG_ROOT"
 
 # Header
 echo ""
@@ -23,7 +24,7 @@ gum style \
 echo ""
 
 # Show current space info
-SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+SPACE_INFO=$(swift "$MISE_CONFIG_ROOT/src/current-space.swift" 2>/dev/null || echo "1/1")
 CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
 TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
 

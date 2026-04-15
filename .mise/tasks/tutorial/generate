@@ -34,9 +34,9 @@ echo ""
 # Explain generation options
 gum style --foreground 141 --bold "Generation Commands"
 echo ""
-echo "  mise run quick         Quick generate with auto resolution"
-echo "  mise run generate      Full interactive (colors, description)"
-echo "  mise run cli \"Name\"    Direct CLI generation"
+echo "  wp quick         Quick generate with auto resolution"
+echo "  wp generate      Full interactive (colors, description)"
+echo "  wp cli \"Name\"    Direct CLI generation"
 echo ""
 
 gum style --foreground 245 "The 'quick' command is the fastest way to create a wallpaper."
@@ -81,6 +81,6 @@ echo ""
 
 # Continue prompt
 if ! gum confirm "Continue to applying wallpapers?"; then
-    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    gum style --foreground 244 "Run 'wp tutorial' to continue later."
     exit 1
 fi

@@ -34,9 +34,9 @@ echo ""
 # Explain apply options
 gum style --foreground 141 --bold "Apply Commands"
 echo ""
-echo "  mise run apply              Picker to choose workspace"
-echo "  mise run apply <name>       Apply specific workspace to current"
-echo "  mise run apply --all        Apply to all spaces (by config order)"
+echo "  wp apply              Picker to choose workspace"
+echo "  wp apply <name>       Apply specific workspace to current"
+echo "  wp apply --all        Apply to all spaces (by config order)"
 echo ""
 
 gum style --foreground 245 "The '--all' option is powerful: it generates wallpapers for"
@@ -70,13 +70,13 @@ if [ -n "$WALLPAPERS" ]; then
     fi
 else
     gum style --foreground 226 "No wallpapers found in $OUTPUT_DIR"
-    gum style --foreground 244 "Generate some wallpapers first with 'mise run quick'"
+    gum style --foreground 244 "Generate some wallpapers first with 'wp quick'"
 fi
 
 echo ""
 
 # Continue prompt
 if ! gum confirm "Continue to workspace navigation?"; then
-    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    gum style --foreground 244 "Run 'wp tutorial' to continue later."
     exit 1
 fi

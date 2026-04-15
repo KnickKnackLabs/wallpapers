@@ -67,7 +67,7 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
         else
             DIFF=$((SPACE_COUNT - CONFIG_COUNT))
             gum style --foreground 245 "You have $DIFF extra space(s). Either:"
-            echo "  • Add more workspaces to your config: mise run config:edit"
+            echo "  • Add more workspaces to your config: wp config edit"
             echo "  • Or remove spaces: Mission Control → hover space → click X"
         fi
         echo ""

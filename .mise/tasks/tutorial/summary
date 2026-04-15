@@ -63,7 +63,7 @@ echo "  clean                Delete all wallpapers"
 echo "  shell                Output shell config for 'wp' alias"
 echo ""
 
-gum style --foreground 244 "All commands above can be run with 'mise run <command>'"
+gum style --foreground 244 "All commands above can be run with 'wp <command>'"
 gum style --foreground 244 "or 'wp <command>' if you've set up the alias."
 echo ""
 
@@ -89,13 +89,13 @@ if [ "$USED_DEMO" = true ] && [ -f "$TUTORIAL_CONFIG" ]; then
         if gum confirm "Save demo config to ~/.config/wallpapers/config.json?"; then
             mkdir -p "$(dirname "$USER_CONFIG")"
             cp "$TUTORIAL_CONFIG" "$USER_CONFIG"
-            gum style --foreground 46 "Config saved! Edit with 'mise run config:edit'"
+            gum style --foreground 46 "Config saved! Edit with 'wp config edit'"
         else
             gum style --foreground 244 "Demo config discarded."
         fi
     else
         gum style --foreground 244 "You already have a config file."
-        gum style --foreground 244 "Run 'mise run config:edit' to modify it."
+        gum style --foreground 244 "Run 'wp config edit' to modify it."
     fi
 fi
 
@@ -105,5 +105,5 @@ rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null || true
 
 echo ""
 gum style --foreground 46 "Happy wallpapering!"
-gum style --foreground 245 "Run 'mise run tutorial' anytime to revisit this guide."
+gum style --foreground 245 "Run 'wp tutorial' anytime to revisit this guide."
 echo ""

@@ -107,6 +107,40 @@ swift src/generate.swift "Name" [options]
   --text-color         Text hex color
 ```
 
+## Development
+
+### Architecture
+
+**Swift layer** — Core Graphics rendering, no external dependencies:
+- `Sources/WallpaperKit/` — generator library (colors, styles, noise, decorations)
+- `Sources/generate/` — CLI entry point for wallpaper generation
+- `Sources/setup/` — batch generator that reads config and outputs file paths
+- `src/current-space.swift` — detects current macOS space via private CGS APIs
+
+**Task layer** — bash scripts in `.mise/tasks/`, orchestrated by mise:
+- Interactive prompts via `gum`
+- Shared helpers in `lib/common.sh` (paths, screen detection, dependency checks)
+- Space management delegates to `butthair` (Hammerspoon wrapper)
+
+**Data flow:** User runs task → bash collects input → invokes Swift generator → PNG written to `~/.local/share/wallpapers/` → optionally set as wallpaper via `osascript`.
+
+### Resolution presets
+
+```
+1080p: 1920x1080    macbook-14: 3024x1964
+1440p: 2560x1440    macbook-16: 3456x2234
+4k: 3840x2160       imac-24: 4480x2520
+                    studio-display: 5120x2880
+```
+
+### Running tests
+
+```bash
+mise run test
+```
+
+Tests use [BATS](https://github.com/bats-core/bats-core) for the bash task layer. Swift tests are in `Tests/`.
+
 ## License
 
 MIT

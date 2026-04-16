@@ -103,4 +103,4 @@ gum spin --spinner dot --title "Generating wallpaper..." -- \
 gum style --foreground 46 "✅ Wallpaper generated! Saved to $WALLPAPERS_OUTPUT_DIR"
 
 # Show the generated files
-ls -la "$OUTPUT_DIR"
+ls -la "$WALLPAPERS_OUTPUT_DIR"

@@ -11,6 +11,7 @@ for cmd in gum swift jq; do
 done
 
 # Constants
+# TODO: source lib/common.sh instead of hardcoding paths
 # shellcheck disable=SC2154
 SCRIPT_DIR="$MISE_CONFIG_ROOT"
 USER_CONFIG="$HOME/.config/wallpapers/config.json"

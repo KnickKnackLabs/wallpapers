@@ -11,6 +11,7 @@ for cmd in gum swift; do
 done
 
 # Constants
+# TODO: source lib/common.sh instead of hardcoding paths
 OUTPUT_DIR="$HOME/.local/share/wallpapers"
 # shellcheck disable=SC2154
 SCRIPT_DIR="$MISE_CONFIG_ROOT"

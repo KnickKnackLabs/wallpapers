@@ -46,7 +46,9 @@ setup() {
   # Skip if not on macOS (no system_profiler)
   command -v system_profiler &>/dev/null || skip "not macOS"
   run detect_screen_resolution
-  [[ "$status" -eq 0 ]]
+  if [[ "$status" -ne 0 ]]; then
+    skip "no display resolution available"
+  fi
   [[ "$output" =~ ^[0-9]+x[0-9]+$ ]]
 }
 

@@ -63,6 +63,7 @@ if gum confirm "Generate a demo wallpaper now?"; then
     echo ""
 
     # Show the generated file
+    # shellcheck disable=SC2012 # Need newest generated file; wallpaper names are tool-generated.
     LATEST=$(ls -t "$OUTPUT_DIR"/*.png 2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
         gum style --foreground 245 "Saved to:"

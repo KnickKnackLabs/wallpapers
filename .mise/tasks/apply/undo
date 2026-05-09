@@ -30,16 +30,22 @@ for i in "${!WINS[@]}"; do
     WIN_ID="${WINS[$i]}"
 
     if [ "$SPACE_NUM" != "$LAST_SPACE" ]; then
-        butthair spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null || true
+        if ! butthair spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null; then
+            : # Window may already be gone; continue best-effort cleanup.
+        fi
         sleep 0.3
         LAST_SPACE="$SPACE_NUM"
     fi
 
-    RESULT=$(butthair windows:close -- "$WIN_ID" < /dev/null 2>&1) || true
+    if ! RESULT=$(butthair windows:close -- "$WIN_ID" < /dev/null 2>&1); then
+        : # Window may already be closed; print butthair's response below.
+    fi
     echo "  $RESULT"
 done
 
-butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null || true
+if ! butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null; then
+    : # Restore is best-effort; cleanup state below regardless.
+fi
 
 rm -f "$STATE_FILE"
 echo "Done."

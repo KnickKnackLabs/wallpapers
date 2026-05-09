@@ -1,3 +1,7 @@
+<!-- Generated from README.tsx — edit that file, then run: mise run readme -->
+
+<div align="center">
+
 # Wallpapers
 
 ```
@@ -13,25 +17,29 @@
                (in peril)
 ```
 
-Generate labeled wallpapers for macOS workspaces.
+**Generate labeled wallpapers for macOS workspaces.**
 
-**What's a workspace?** macOS lets you create multiple desktops called "Spaces" (swipe left/right with three fingers, or ctrl+←/→). But Apple doesn't let you name them - so this tool generates wallpapers with labels to identify each one.
+macOS lets you create multiple desktops ("Spaces") but doesn't let you name them.
+This tool generates wallpapers with labels so you can tell them apart.
+
+![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
+[![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
+![tasks: 24](https://img.shields.io/badge/tasks-24-blue?style=flat)
+![tests: 14](https://img.shields.io/badge/tests-14-green?style=flat)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
+
+</div>
 
 ## Quick Start
 
 ```bash
-# Install mise (if you don't have it)
-curl https://mise.run | sh
+# Install
+shiv install wallpapers
 
-# Install wallpapers
-git clone https://github.com/KnickKnackLabs/wallpapers.git ~/.local/share/wallpapers
-cd ~/.local/share/wallpapers && mise trust && mise install
+# Add the wp alias to your shell
+eval "$(wallpapers shell)"
 
-# Add to your shell config (~/.zshrc or ~/.bashrc)
-eval "$(mise -C ~/.local/share/wallpapers run -q shell)"
-
-# Reload shell and run the tutorial
-source ~/.zshrc
+# Run the tutorial
 wp tutorial
 ```
 
@@ -48,7 +56,7 @@ wp goto -         # Go back to previous workspace
 
 ## Config
 
-Create your config with `wp config:init`, then edit with `wp config:edit`:
+Create your config with `wp config init`, then edit with `wp config edit`:
 
 ```json
 {
@@ -66,81 +74,65 @@ Create your config with `wp config:init`, then edit with `wp config:edit`:
 
 The order of workspaces matches your Spaces order (left to right).
 
-## Features
+## Resolution presets
 
-- **Native Swift** - Core Graphics rendering, no external dependencies
-- **Auto-detect resolution** - Fits your screen perfectly
-- **LTR/RTL support** - Works with English, Hebrew, Arabic, etc.
-- **Space navigation** - Switch workspaces by name
+Auto-detect is the default. You can also specify a preset with `--resolution`:
 
-## Requirements
+| Preset | Dimensions |
+| --- | --- |
+| `1080p` | 1920×1080 |
+| `1440p` | 2560×1440 |
+| `4k` | 3840×2160 |
+| `macbook-14` | 3024×1964 |
+| `macbook-16` | 3456×2234 |
+| `imac-24` | 4480×2520 |
+| `studio-display` | 5120×2880 |
 
-- macOS 13+
-- [mise](https://mise.jdx.dev/) (installs other dependencies automatically)
+## All tasks
 
-## All Commands
-
-| Command | Description |
-|---------|-------------|
-| `wp` | Apply wallpaper (shows picker, or use `--all`) |
-| `wp quick` | Quick generate - just enter a name |
-| `wp goto [name]` | Switch workspace (picker if no name) |
-| `wp goto -` | Go back to previous workspace |
-| `wp generate` | Full interactive generator with all options |
-| `wp config:init` | Create starter config |
-| `wp config:edit` | Open config in editor |
-| `wp info:space` | Show current desktop number |
-| `wp info:list` | List generated wallpapers |
-| `wp clean` | Delete all generated wallpapers |
-| `wp tutorial` | Interactive tutorial |
-
-## Advanced
-
-For scripting or direct access:
-
-```bash
-swift src/generate.swift "Name" [options]
-  -d, --description    Subtitle text
-  -r, --resolution     Preset: 1080p, 1440p, 4k, macbook-14, macbook-16, imac-24, studio-display
-  --width, --height    Custom dimensions
-  --bg-color           Background hex color
-  --text-color         Text hex color
-```
+| Task | Description |
+| --- | --- |
+| `apply:undo` | Close windows created by the last 'apply --apps' |
+| `tutorial:apply` | Tutorial: Apply wallpaper to spaces demo |
+| `tutorial:navigate` | Tutorial: Workspace navigation demo |
+| `tutorial:intro` | Tutorial: Introduction and overview |
+| `tutorial:config` | Tutorial: Configuration setup walkthrough |
+| `tutorial:generate` | Tutorial: Wallpaper generation demo |
+| `tutorial:summary` | Tutorial: Command reference and completion |
+| `goto` | Switch to a workspace by name |
+| `config:init` | Initialize config file with example workspaces |
+| `config:edit` | Edit config file in your editor |
+| `shell` | Output shell configuration (use with eval) |
+| `quick` | Quick generate with just a name (auto-detects screen resolution) |
+| `cli` | Run generator directly with arguments |
+| `readme` | Regenerate README.md from README.tsx |
+| `info:resolution` | Show your screen resolution |
+| `info:list` | List generated wallpapers |
+| `info:wallpaper` | Show current wallpaper file path |
+| `info:space` | Show current desktop space |
+| `clean` | Remove all generated wallpapers |
+| `ai` | Agent instructions for helping users |
+| `generate` | Generate a wallpaper interactively |
+| `hammerspoon:config` | Install wp workspace integration into Hammerspoon config |
+| `open` | Open the wallpapers directory in Finder |
+| `help` | Show generator CLI help |
 
 ## Development
 
-### Architecture
-
-**Swift layer** — Core Graphics rendering, no external dependencies:
-- `Sources/WallpaperKit/` — generator library (colors, styles, noise, decorations)
-- `Sources/generate/` — CLI entry point for wallpaper generation
-- `Sources/setup/` — batch generator that reads config and outputs file paths
-- `src/current-space.swift` — detects current macOS space via private CGS APIs
-
-**Task layer** — bash scripts in `.mise/tasks/`, orchestrated by mise:
-- Interactive prompts via `gum`
-- Shared helpers in `lib/common.sh` (paths, screen detection, dependency checks)
-- Space management delegates to `butthair` (Hammerspoon wrapper)
-
-**Data flow:** User runs task → bash collects input → invokes Swift generator → PNG written to `~/.local/share/wallpapers/` → optionally set as wallpaper via `osascript`.
-
-### Resolution presets
-
-```
-1080p: 1920x1080    macbook-14: 3024x1964
-1440p: 2560x1440    macbook-16: 3456x2234
-4k: 3840x2160       imac-24: 4480x2520
-                    studio-display: 5120x2880
-```
-
-### Running tests
-
 ```bash
-mise run test
+gh repo clone KnickKnackLabs/wallpapers
+cd wallpapers && mise trust && mise install
+mise run test   # 14 tests
 ```
 
-Tests use [BATS](https://github.com/bats-core/bats-core) for the bash task layer. Swift tests are in `Tests/`.
+**Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).
+
+<div align="center">
 
 ## License
 
 MIT
+
+This README was created using [readme](https://github.com/KnickKnackLabs/readme).
+
+</div>

@@ -4,6 +4,7 @@ source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
 if [ -d "$WALLPAPERS_OUTPUT_DIR" ] && [ "$(ls -A "$WALLPAPERS_OUTPUT_DIR" 2>/dev/null)" ]; then
     gum style --foreground 212 --bold "📁 Generated Wallpapers:"
+    # shellcheck disable=SC2012 # Human-readable listing of tool-generated wallpaper files.
     ls -lh "$WALLPAPERS_OUTPUT_DIR"/*.png 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
 else
     gum style --foreground 244 "No wallpapers generated yet. Run 'wallpapers generate' to create one."

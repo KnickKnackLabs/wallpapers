@@ -3,12 +3,10 @@
 set -e
 
 # Check dependencies
-for cmd in gum; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "Error: $cmd is required but not installed."
-        exit 1
-    fi
-done
+if ! command -v gum &>/dev/null; then
+    echo "Error: gum is required but not installed."
+    exit 1
+fi
 
 # Constants
 USER_CONFIG="$HOME/.config/wallpapers/config.json"
@@ -101,7 +99,9 @@ fi
 
 # Cleanup
 rm -f "$ACTIVE_CONFIG_FILE"
-rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null || true
+if ! rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null; then
+    : # Demo cleanup is best-effort.
+fi
 
 echo ""
 gum style --foreground 46 "Happy wallpapering!"

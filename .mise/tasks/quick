@@ -21,6 +21,7 @@ gum spin --spinner dot --title "Generating at ${SCREEN_W}x${SCREEN_H}..." -- \
 gum style --foreground 46 "✅ Generated! Saved to $WALLPAPERS_OUTPUT_DIR"
 
 # Get the most recently created wallpaper (the one we just generated)
+# shellcheck disable=SC2012 # Need newest generated file; wallpaper names are tool-generated.
 WALLPAPER_PATH="$(ls -t "$WALLPAPERS_OUTPUT_DIR"/*.png | head -1)"
 
 # Set wallpaper for current desktop

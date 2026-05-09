@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Common test fixtures for wallpapers BATS tests.
 
-# Repo root — use MISE_CONFIG_ROOT if available (task context), fall back to git
-REPO_ROOT="${MISE_CONFIG_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# Repo root — derive from the test file's own path.
+# Do not read MISE_CONFIG_ROOT here; agent shells inherit it from the launcher.
+REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
 
 # Source shared library
 source "$REPO_ROOT/lib/common.sh"

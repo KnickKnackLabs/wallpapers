@@ -2,12 +2,25 @@
 # Tasks are auto-discovered from .mise/tasks/
 
 [settings]
+experimental = true
+quiet = true
 task_output = "interleave"
+lockfile = true
+
+[plugins]
+shiv = "https://github.com/KnickKnackLabs/vfox-shiv"
 
 [tools]
-gum = "latest"
-jq = "latest"
-usage = "latest"
+gum = "0.17.0"
+jq = "1.8.1"
+usage = "3.2.1"
 bats = "1.13.0"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+"shiv:codebase" = "latest"
+"shiv:readme" = "latest"
+
+[_.codebase]
+lint = ["mise-settings", "bats-test-task", "bats-test-helper", "mcr-scope", "or-true", "shellcheck"]
 
 # Note: Swift is built-in on macOS, no need to manage it

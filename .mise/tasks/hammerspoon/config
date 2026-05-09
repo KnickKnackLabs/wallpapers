@@ -334,5 +334,7 @@ fi
 
 # Reload config if Hammerspoon is running
 if pgrep -x "Hammerspoon" > /dev/null && [ -x "$HS_CLI" ]; then
-    "$HS_CLI" -c "hs.reload()" 2>/dev/null && echo "Config reloaded" || true
+    if "$HS_CLI" -c "hs.reload()" 2>/dev/null; then
+        echo "Config reloaded"
+    fi
 fi

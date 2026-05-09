@@ -45,6 +45,7 @@ gum style --foreground 245 "each workspace in your config and applies them in or
 echo ""
 
 # Check if wallpapers exist
+# shellcheck disable=SC2012 # Need newest generated files; wallpaper names are tool-generated.
 WALLPAPERS=$(ls -t "$OUTPUT_DIR"/*.png 2>/dev/null | head -5)
 
 if [ -n "$WALLPAPERS" ]; then

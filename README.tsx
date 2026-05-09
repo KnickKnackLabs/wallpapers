@@ -201,4 +201,4 @@ mise run test   # ${testCount} tests`}</CodeBlock>
   </>
 );
 
-console.log(readme);
+console.log(`<!-- Generated from README.tsx — edit that file, then run: mise run readme -->\n\n${readme}`);

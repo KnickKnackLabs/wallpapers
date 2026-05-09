@@ -3,12 +3,10 @@
 set -e
 
 # Check dependencies
-for cmd in gum; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "Error: $cmd is required but not installed."
-        exit 1
-    fi
-done
+if ! command -v gum &>/dev/null; then
+    echo "Error: gum is required but not installed."
+    exit 1
+fi
 
 clear
 

@@ -142,11 +142,15 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
             PREV_LAST_SPACE=""
             for i in "${!PREV_WINS[@]}"; do
                 if [ "${PREV_SPACES[$i]}" != "$PREV_LAST_SPACE" ]; then
-                    butthair spaces:goto -- "${PREV_SPACES[$i]}" < /dev/null 2>/dev/null || true
+                    if ! butthair spaces:goto -- "${PREV_SPACES[$i]}" < /dev/null 2>/dev/null; then
+                        : # Window cleanup is best-effort; continue closing what we can.
+                    fi
                     sleep 0.3
                     PREV_LAST_SPACE="${PREV_SPACES[$i]}"
                 fi
-                butthair windows:close -- "${PREV_WINS[$i]}" < /dev/null 2>/dev/null || true
+                if ! butthair windows:close -- "${PREV_WINS[$i]}" < /dev/null 2>/dev/null; then
+                    : # Window may already be gone.
+                fi
             done
         fi
         : > "$STATE_FILE"

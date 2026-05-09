@@ -11,7 +11,9 @@ for cmd in gum swift jq; do
 done
 
 # Constants
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# TODO: source lib/common.sh instead of hardcoding paths
+# shellcheck disable=SC2154
+SCRIPT_DIR="$MISE_CONFIG_ROOT"
 USER_CONFIG="$HOME/.config/wallpapers/config.json"
 STATE_DIR="$HOME/.local/state/wallpapers"
 ACTIVE_CONFIG_FILE="$STATE_DIR/tutorial-active-config"
@@ -41,9 +43,9 @@ echo ""
 # Explain navigation options
 gum style --foreground 141 --bold "Navigation Commands"
 echo ""
-echo "  mise run goto              Picker to choose workspace"
-echo "  mise run goto <name>       Jump to workspace by name or ID"
-echo "  mise run goto -            Go back to previous space (like cd -)"
+echo "  wp goto              Picker to choose workspace"
+echo "  wp goto <name>       Jump to workspace by name or ID"
+echo "  wp goto -            Go back to previous space (like cd -)"
 echo ""
 
 # Show workspaces from config
@@ -53,12 +55,12 @@ if [ -n "$ACTIVE_CONFIG" ] && [ -f "$ACTIVE_CONFIG" ]; then
     jq -r '.workspaces | to_entries[] | "  \(.key + 1). \(.value.name)"' "$ACTIVE_CONFIG"
     echo ""
 else
-    gum style --foreground 244 "No config found. Create one with 'mise run config:init'"
+    gum style --foreground 244 "No config found. Create one with 'wp config init'"
     echo ""
 fi
 
 # Get current space info
-SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+SPACE_INFO=$(swift "$MISE_CONFIG_ROOT/src/current-space.swift" 2>/dev/null || echo "1/1")
 CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
 TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
 
@@ -82,7 +84,7 @@ if [ "$TOTAL_SPACES" -gt 1 ]; then
 
         gum style --foreground 46 "Back on Desktop $CURRENT_SPACE. That's how 'goto' navigates!"
         echo ""
-        gum style --foreground 245 "Tip: 'mise run goto -' remembers your previous space."
+        gum style --foreground 245 "Tip: 'wp goto -' remembers your previous space."
     else
         gum style --foreground 244 "Skipping navigation demo."
     fi
@@ -95,6 +97,6 @@ echo ""
 
 # Continue prompt
 if ! gum confirm "Continue to command summary?"; then
-    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    gum style --foreground 244 "Run 'wp tutorial' to continue later."
     exit 1
 fi

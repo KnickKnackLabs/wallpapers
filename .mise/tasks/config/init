@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 #MISE description="Initialize config file with example workspaces"
 set -e
-
-CONFIG_DIR="$HOME/.config/wallpapers"
-CONFIG_FILE="$CONFIG_DIR/config.json"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
 # Check if config already exists
-if [ -f "$CONFIG_FILE" ]; then
-    if ! gum confirm "Config already exists at $CONFIG_FILE. Overwrite?"; then
+if [ -f "$WALLPAPERS_CONFIG_FILE" ]; then
+    if ! gum confirm "Config already exists at $WALLPAPERS_CONFIG_FILE. Overwrite?"; then
         gum style --foreground 226 "⚠️  Cancelled"
         exit 0
     fi
 fi
 
 # Create config directory
-mkdir -p "$CONFIG_DIR"
+mkdir -p "$WALLPAPERS_CONFIG_DIR"
 
 # Write template config
-cat > "$CONFIG_FILE" << 'EOF'
+cat > "$WALLPAPERS_CONFIG_FILE" << 'EOF'
 {
   "workspaces": [
     {
@@ -44,5 +42,5 @@ cat > "$CONFIG_FILE" << 'EOF'
 }
 EOF
 
-gum style --foreground 46 "✅ Config created at $CONFIG_FILE"
-gum style --foreground 245 "Edit with: mise run config:edit"
+gum style --foreground 46 "✅ Config created at $WALLPAPERS_CONFIG_FILE"
+gum style --foreground 245 "Edit with: wallpapers config edit"

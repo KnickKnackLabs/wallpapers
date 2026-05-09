@@ -7,7 +7,7 @@ CONFIG_FILE="$CONFIG_DIR/init.lua"
 WP_MODULE="$CONFIG_DIR/wp.lua"
 APP_PATH="/Applications/Hammerspoon.app"
 HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+REPO_DIR="$MISE_CONFIG_ROOT"
 
 # Require butthair to have set up Hammerspoon first
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -334,5 +334,7 @@ fi
 
 # Reload config if Hammerspoon is running
 if pgrep -x "Hammerspoon" > /dev/null && [ -x "$HS_CLI" ]; then
-    "$HS_CLI" -c "hs.reload()" 2>/dev/null && echo "Config reloaded" || true
+    if "$HS_CLI" -c "hs.reload()" 2>/dev/null; then
+        echo "Config reloaded"
+    fi
 fi

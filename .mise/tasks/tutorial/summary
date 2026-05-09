@@ -3,12 +3,10 @@
 set -e
 
 # Check dependencies
-for cmd in gum; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "Error: $cmd is required but not installed."
-        exit 1
-    fi
-done
+if ! command -v gum &>/dev/null; then
+    echo "Error: gum is required but not installed."
+    exit 1
+fi
 
 # Constants
 USER_CONFIG="$HOME/.config/wallpapers/config.json"
@@ -63,7 +61,7 @@ echo "  clean                Delete all wallpapers"
 echo "  shell                Output shell config for 'wp' alias"
 echo ""
 
-gum style --foreground 244 "All commands above can be run with 'mise run <command>'"
+gum style --foreground 244 "All commands above can be run with 'wp <command>'"
 gum style --foreground 244 "or 'wp <command>' if you've set up the alias."
 echo ""
 
@@ -89,21 +87,23 @@ if [ "$USED_DEMO" = true ] && [ -f "$TUTORIAL_CONFIG" ]; then
         if gum confirm "Save demo config to ~/.config/wallpapers/config.json?"; then
             mkdir -p "$(dirname "$USER_CONFIG")"
             cp "$TUTORIAL_CONFIG" "$USER_CONFIG"
-            gum style --foreground 46 "Config saved! Edit with 'mise run config:edit'"
+            gum style --foreground 46 "Config saved! Edit with 'wp config edit'"
         else
             gum style --foreground 244 "Demo config discarded."
         fi
     else
         gum style --foreground 244 "You already have a config file."
-        gum style --foreground 244 "Run 'mise run config:edit' to modify it."
+        gum style --foreground 244 "Run 'wp config edit' to modify it."
     fi
 fi
 
 # Cleanup
 rm -f "$ACTIVE_CONFIG_FILE"
-rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null || true
+if ! rm -rf "$TUTORIAL_CONFIG_DIR" 2>/dev/null; then
+    : # Demo cleanup is best-effort.
+fi
 
 echo ""
 gum style --foreground 46 "Happy wallpapering!"
-gum style --foreground 245 "Run 'mise run tutorial' anytime to revisit this guide."
+gum style --foreground 245 "Run 'wp tutorial' anytime to revisit this guide."
 echo ""

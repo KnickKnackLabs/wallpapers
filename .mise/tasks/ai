@@ -5,7 +5,7 @@ cat << 'EOF'
 # Wallpapers
 
 > llms.txt for AI agents helping users USE this tool.
-> For agents working ON the codebase, see CLAUDE.md.
+> For agents working ON the codebase, see the Development section in README.md.
 
 ## Overview
 
@@ -411,6 +411,7 @@ if [ -d "$OUTPUT_DIR" ] && [ "$(ls -A "$OUTPUT_DIR"/*.png 2>/dev/null)" ]; then
     echo ""
     echo "| File | Size | Modified |"
     echo "|------|------|----------|"
+    # shellcheck disable=SC2012 # Human-readable listing of tool-generated wallpaper files.
     ls -lh "$OUTPUT_DIR"/*.png 2>/dev/null | awk '{print "| " $NF " | " $5 " | " $6 " " $7 " |"}' | sed "s|$OUTPUT_DIR/||"
     echo ""
 else

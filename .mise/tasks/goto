@@ -3,21 +3,12 @@
 #USAGE arg "[name]" help="Workspace name/id, or '-' to go back (shows picker if omitted)"
 #USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
 set -e
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-CONFIG_FILE="$HOME/.config/wallpapers/config.json"
-STATE_DIR="$HOME/.local/state/wallpapers"
-PREVIOUS_FILE="$STATE_DIR/previous-space"
+PREVIOUS_FILE="$WALLPAPERS_STATE_DIR/previous-space"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    gum style --foreground 196 "❌ Config not found. Run: mise run config:init"
-    exit 1
-fi
-
-# Require butthair
-if ! command -v butthair &>/dev/null; then
-    gum style --foreground 196 "❌ butthair not found. Install with: shiv install butthair"
-    exit 1
-fi
+require_config
+require_command butthair "Install with: shiv install butthair"
 
 # Get current space
 CURRENT=$(butthair spaces:current -- -i 2>/dev/null)
@@ -42,7 +33,7 @@ if [ "$TARGET" = "-" ]; then
     fi
 # Handle no argument (show picker)
 elif [ -z "$TARGET" ]; then
-    WORKSPACES=$(jq -r '.workspaces | to_entries[] | "\(.key + 1). \(.value.name)"' "$CONFIG_FILE")
+    WORKSPACES=$(jq -r '.workspaces | to_entries[] | "\(.key + 1). \(.value.name)"' "$WALLPAPERS_CONFIG_FILE")
 
     SELECTION=$(echo "$WORKSPACES" | gum choose --header "Go to workspace:")
 
@@ -64,7 +55,7 @@ else
             or (.value.name | ascii_downcase) == $search
         ) |
         .key + 1
-    ' "$CONFIG_FILE")
+    ' "$WALLPAPERS_CONFIG_FILE")
 
     if [ -z "$TARGET_INDEX" ]; then
         gum style --foreground 196 "❌ Workspace not found: $TARGET"
@@ -78,7 +69,7 @@ else
 fi
 
 # Save current space before navigating
-mkdir -p "$STATE_DIR"
+mkdir -p "$WALLPAPERS_STATE_DIR"
 echo "$CURRENT" > "$PREVIOUS_FILE"
 
 # Navigate

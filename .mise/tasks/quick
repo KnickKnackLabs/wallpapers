@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Quick generate with just a name (auto-detects screen resolution)"
 set -e
-
-OUTPUT_DIR="$HOME/.local/share/wallpapers"
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
 NAME=$(gum input --placeholder "Workspace name" --prompt "📝 Quick generate: ")
 
@@ -12,17 +11,18 @@ if [ -z "$NAME" ]; then
 fi
 
 # Auto-detect screen resolution
-SCREEN_RES=$(system_profiler SPDisplaysDataType | grep -i "Resolution:" | head -1 | sed 's/.*: //' | sed 's/ Retina//' | sed 's/ //g')
-SCREEN_W=$(echo "$SCREEN_RES" | cut -d'x' -f1)
-SCREEN_H=$(echo "$SCREEN_RES" | cut -d'x' -f2)
+SCREEN_RES=$(detect_screen_resolution)
+SCREEN_W=$(resolution_width "$SCREEN_RES")
+SCREEN_H=$(resolution_height "$SCREEN_RES")
 
 gum spin --spinner dot --title "Generating at ${SCREEN_W}x${SCREEN_H}..." -- \
     swift run generate -- "$NAME" --width "$SCREEN_W" --height "$SCREEN_H"
 
-gum style --foreground 46 "✅ Generated! Saved to $OUTPUT_DIR"
+gum style --foreground 46 "✅ Generated! Saved to $WALLPAPERS_OUTPUT_DIR"
 
 # Get the most recently created wallpaper (the one we just generated)
-WALLPAPER_PATH="$(ls -t "$OUTPUT_DIR"/*.png | head -1)"
+# shellcheck disable=SC2012 # Need newest generated file; wallpaper names are tool-generated.
+WALLPAPER_PATH="$(ls -t "$WALLPAPERS_OUTPUT_DIR"/*.png | head -1)"
 
 # Set wallpaper for current desktop
 gum spin --spinner dot --title "Setting wallpaper..." -- \

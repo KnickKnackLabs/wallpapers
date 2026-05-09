@@ -118,12 +118,12 @@ echo ""
 # Helpful commands
 gum style --foreground 141 --bold "Helpful Commands"
 echo ""
-echo "  mise run config:init   Create a starter config"
-echo "  mise run config:edit   Open config in your editor"
+echo "  wp config init   Create a starter config"
+echo "  wp config edit   Open config in your editor"
 echo ""
 
 # Continue prompt
 if ! gum confirm "Continue to wallpaper generation?"; then
-    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    gum style --foreground 244 "Run 'wp tutorial' to continue later."
     exit 1
 fi

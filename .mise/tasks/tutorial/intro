@@ -3,12 +3,10 @@
 set -e
 
 # Check dependencies
-for cmd in gum; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "Error: $cmd is required but not installed."
-        exit 1
-    fi
-done
+if ! command -v gum &>/dev/null; then
+    echo "Error: gum is required but not installed."
+    exit 1
+fi
 
 clear
 
@@ -48,11 +46,11 @@ echo "  4. Navigating between workspaces by name"
 echo "  5. Quick command reference"
 echo ""
 
-gum style --foreground 244 "Tip: Add 'eval \"\$(mise run -q shell)\"' to your shell config for 'wp'."
+gum style --foreground 244 "Tip: Add 'eval \"\$(wallpapers shell)\"' to your shell config for the 'wp' alias."
 echo ""
 
 # Continue prompt
 if ! gum confirm "Ready to begin?"; then
-    gum style --foreground 244 "No problem! Run 'mise run tutorial' when you're ready."
+    gum style --foreground 244 "No problem! Run 'wp tutorial' when you're ready."
     exit 1
 fi

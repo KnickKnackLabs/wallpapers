@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Shared constants and helpers for wallpapers tasks.
+
+# Paths
+WALLPAPERS_OUTPUT_DIR="$HOME/.local/share/wallpapers"
+WALLPAPERS_CONFIG_DIR="$HOME/.config/wallpapers"
+WALLPAPERS_CONFIG_FILE="$WALLPAPERS_CONFIG_DIR/config.json"
+WALLPAPERS_STATE_DIR="$HOME/.local/state/wallpapers"
+
+# Detect the primary screen resolution.
+# Outputs WxH (e.g. "3024x1964"). Returns 1 if detection fails.
+detect_screen_resolution() {
+  local res
+  res=$(system_profiler SPDisplaysDataType 2>/dev/null \
+    | grep -i "Resolution:" \
+    | head -1 \
+    | sed 's/.*: //' \
+    | sed 's/ Retina//' \
+    | sed 's/ //g')
+  if [[ -z "$res" ]]; then
+    echo "error: could not detect screen resolution" >&2
+    return 1
+  fi
+  echo "$res"
+}
+
+# Extract width from a WxH resolution string.
+resolution_width() {
+  echo "${1%%x*}"
+}
+
+# Extract height from a WxH resolution string.
+resolution_height() {
+  echo "${1#*x}"
+}
+
+# Check that a command exists, exit with a styled error if not.
+# Usage: require_command <cmd> [install hint]
+require_command() {
+  local cmd="$1"
+  local hint="${2:-}"
+  if ! command -v "$cmd" &>/dev/null; then
+    if command -v gum &>/dev/null; then
+      gum style --foreground 196 "❌ $cmd not found.${hint:+ $hint}"
+    else
+      echo "error: $cmd not found.${hint:+ $hint}" >&2
+    fi
+    exit 1
+  fi
+}
+
+# Check that the config file exists, exit with error if not.
+require_config() {
+  if [[ ! -f "$WALLPAPERS_CONFIG_FILE" ]]; then
+    if command -v gum &>/dev/null; then
+      gum style --foreground 196 "❌ Config not found. Run: wallpapers config init"
+    else
+      echo "error: config not found at $WALLPAPERS_CONFIG_FILE" >&2
+    fi
+    exit 1
+  fi
+}

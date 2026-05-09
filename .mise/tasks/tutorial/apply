@@ -11,8 +11,10 @@ for cmd in gum swift; do
 done
 
 # Constants
+# TODO: source lib/common.sh instead of hardcoding paths
 OUTPUT_DIR="$HOME/.local/share/wallpapers"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# shellcheck disable=SC2154
+SCRIPT_DIR="$MISE_CONFIG_ROOT"
 
 # Header
 echo ""
@@ -23,7 +25,7 @@ gum style \
 echo ""
 
 # Show current space info
-SPACE_INFO=$(swift "$SCRIPT_DIR/src/current-space.swift" 2>/dev/null || echo "1/1")
+SPACE_INFO=$(swift "$MISE_CONFIG_ROOT/src/current-space.swift" 2>/dev/null || echo "1/1")
 CURRENT_SPACE=$(echo "$SPACE_INFO" | cut -d'/' -f1)
 TOTAL_SPACES=$(echo "$SPACE_INFO" | cut -d'/' -f2)
 
@@ -33,9 +35,9 @@ echo ""
 # Explain apply options
 gum style --foreground 141 --bold "Apply Commands"
 echo ""
-echo "  mise run apply              Picker to choose workspace"
-echo "  mise run apply <name>       Apply specific workspace to current"
-echo "  mise run apply --all        Apply to all spaces (by config order)"
+echo "  wp apply              Picker to choose workspace"
+echo "  wp apply <name>       Apply specific workspace to current"
+echo "  wp apply --all        Apply to all spaces (by config order)"
 echo ""
 
 gum style --foreground 245 "The '--all' option is powerful: it generates wallpapers for"
@@ -43,6 +45,7 @@ gum style --foreground 245 "each workspace in your config and applies them in or
 echo ""
 
 # Check if wallpapers exist
+# shellcheck disable=SC2012 # Need newest generated files; wallpaper names are tool-generated.
 WALLPAPERS=$(ls -t "$OUTPUT_DIR"/*.png 2>/dev/null | head -5)
 
 if [ -n "$WALLPAPERS" ]; then
@@ -69,13 +72,13 @@ if [ -n "$WALLPAPERS" ]; then
     fi
 else
     gum style --foreground 226 "No wallpapers found in $OUTPUT_DIR"
-    gum style --foreground 244 "Generate some wallpapers first with 'mise run quick'"
+    gum style --foreground 244 "Generate some wallpapers first with 'wp quick'"
 fi
 
 echo ""
 
 # Continue prompt
 if ! gum confirm "Continue to workspace navigation?"; then
-    gum style --foreground 244 "Run 'mise run tutorial' to continue later."
+    gum style --foreground 244 "Run 'wp tutorial' to continue later."
     exit 1
 fi

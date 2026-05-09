@@ -1,3 +1,11 @@
 #!/usr/bin/env bash
 #MISE description="Run generator directly with arguments"
+#USAGE arg "<name>" help="Workspace name"
+#USAGE flag "-d --description <desc>" help="Subtitle text"
+#USAGE flag "-r --resolution <res>" help="Preset: 1080p, 1440p, 4k, macbook-14, macbook-16, imac-24, studio-display"
+#USAGE flag "--width <w>" help="Custom width"
+#USAGE flag "--height <h>" help="Custom height"
+#USAGE flag "--bg-color <color>" help="Background hex color"
+#USAGE flag "--text-color <color>" help="Text hex color"
+#USAGE flag "--style <style>" help="Visual style: classic, diagonal, tiled, flowfield, typography, perspective"
 swift run generate -- "$@"

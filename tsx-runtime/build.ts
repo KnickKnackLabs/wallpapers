@@ -8,17 +8,22 @@ type Options = {
   source?: string;
   out?: string;
   check: boolean;
+  recipeArgs: string[];
 };
 
 function usage(): never {
-  console.error("Usage: build.ts --source <WALLPAPERS.tsx> --out <WALLPAPERS.json> [--check]");
+  console.error("Usage: build.ts --source <WALLPAPERS.tsx> --out <WALLPAPERS.json> [--check] [-- <args...>]");
   process.exit(2);
 }
 
 function parseArgs(argv: string[]): Options {
-  const options: Options = { check: false };
+  const options: Options = { check: false, recipeArgs: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
+    if (arg === "--") {
+      options.recipeArgs = argv.slice(i + 1);
+      break;
+    }
     switch (arg) {
       case "--source":
         i += 1;
@@ -49,6 +54,10 @@ function parseArgs(argv: string[]): Options {
 const options = parseArgs(process.argv.slice(2));
 const source = resolve(options.source!);
 const out = resolve(options.out!);
+
+const recipeArgv = [Bun.argv[0] ?? "bun", source, ...options.recipeArgs];
+(Bun as unknown as { argv: string[] }).argv = recipeArgv;
+process.argv = recipeArgv;
 
 const mod = await import(pathToFileURL(source).href);
 const exported = mod.default ?? mod.workspaceSet ?? mod.config;

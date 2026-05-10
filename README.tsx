@@ -122,6 +122,7 @@ wp --all          # Apply wallpapers to all spaces from config
 wp quick          # Quick one-off wallpaper for current space
 wp snapshot       # Bootstrap WALLPAPERS.tsx from current Spaces
 wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
+wp build --set quick  # Pass arguments to WALLPAPERS.tsx
 wp apply --config ./WALLPAPERS.json --wallpapers
 wp goto           # Switch workspace (picker)
 wp goto code      # Switch to workspace by name
@@ -152,7 +153,9 @@ wp goto -         # Go back to previous workspace`}</CodeBlock>
 
       <Paragraph>
         For repo-owned recipes, write <Code>WALLPAPERS.tsx</Code>, then run{" "}
-        <Code>wp build</Code>. To start from your current macOS layout, run{" "}
+        <Code>wp build</Code>. Extra build arguments are forwarded to the TSX file, so a
+        recipe can parse <Code>Bun.argv.slice(2)</Code> and expose variants such as{" "}
+        <Code>wp build --set quick</Code>. To start from your current macOS layout, run{" "}
         <Code>wp snapshot</Code>; it writes one starter zone per Space, with optional window
         comments via <Code>wp snapshot --include-windows</Code>. The generated{" "}
         <Code>WALLPAPERS.json</Code> can be applied explicitly with{" "}

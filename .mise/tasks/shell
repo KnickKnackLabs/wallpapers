@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 #MISE description="Output shell configuration (use with eval)"
-echo "alias wp='mise -C \"${MISE_CONFIG_ROOT}\" run'"
+echo "alias wp='WALLPAPERS_CALLER_PWD=\"\$PWD\" mise -C \"${MISE_CONFIG_ROOT}\" run'"

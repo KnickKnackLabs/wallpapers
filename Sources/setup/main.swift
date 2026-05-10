@@ -125,11 +125,12 @@ func printUsage() {
 
     Options:
       --generate-only     Only generate wallpapers, don't apply to spaces
+      --config <path>     Read config from this path
       --width <pixels>    Override width for all wallpapers
       --height <pixels>   Override height for all wallpapers
       -h, --help          Show this help
 
-    Reads config from ~/.config/wallpapers/config.json
+    Reads config from ~/.config/wallpapers/config.json unless --config is passed.
     Supports both new format (spaces/zones) and legacy format (workspaces).
     """)
 }
@@ -137,6 +138,7 @@ func printUsage() {
 var args = Array(CommandLine.arguments.dropFirst())
 
 var generateOnly = false
+var configPath = NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath
 var customWidth: Int?
 var customHeight: Int?
 
@@ -146,6 +148,9 @@ while i < args.count {
     switch arg {
     case "--generate-only":
         generateOnly = true
+    case "--config":
+        i += 1
+        if i < args.count { configPath = NSString(string: args[i]).expandingTildeInPath }
     case "--width":
         i += 1
         if i < args.count { customWidth = Int(args[i]) }
@@ -162,7 +167,6 @@ while i < args.count {
 }
 
 // Read config
-let configPath = NSString(string: "~/.config/wallpapers/config.json").expandingTildeInPath
 guard FileManager.default.fileExists(atPath: configPath) else {
     fputs("Error: Config not found at \(configPath)\n", stderr)
     fputs("Run: mise run config:init\n", stderr)

@@ -5,11 +5,16 @@
 #USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
 #USAGE flag "--wallpapers" help="Only apply wallpapers"
 #USAGE flag "--apps" help="Only launch and position apps"
+#USAGE flag "--config <config>" help="Config file to apply (default: ~/.config/wallpapers/config.json)"
 #USAGE flag "--clean" help="Close previous app windows before applying"
-set -e
+set -euo pipefail
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-require_config
+if [ -n "${usage_config:-}" ]; then
+    WALLPAPERS_CONFIG_FILE=$(wallpapers_resolve_path "$usage_config")
+fi
+
+require_config "$WALLPAPERS_CONFIG_FILE"
 require_command butthair "Install with: shiv install butthair"
 
 # Require Hammerspoon via butthair
@@ -78,7 +83,7 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
 
     # --- Wallpapers ---
     if [ "$DO_WALLPAPERS" = "true" ]; then
-        OUTPUT=$(swift run setup -- --width "$SCREEN_W" --height "$SCREEN_H")
+        OUTPUT=$(swift run setup -- --config "$WALLPAPERS_CONFIG_FILE" --width "$SCREEN_W" --height "$SCREEN_H")
         FILES=()
         while IFS= read -r line; do
             if [[ "$line" == FILE:* ]]; then

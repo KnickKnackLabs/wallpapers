@@ -112,6 +112,8 @@ wp tutorial`}</CodeBlock>
       <CodeBlock lang="bash">{`wp                # Apply wallpaper (picker or --all)
 wp --all          # Apply wallpapers to all spaces from config
 wp quick          # Quick one-off wallpaper for current space
+wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
+wp apply --config ./WALLPAPERS.json --wallpapers
 wp goto           # Switch workspace (picker)
 wp goto code      # Switch to workspace by name
 wp goto -         # Go back to previous workspace`}</CodeBlock>
@@ -137,6 +139,12 @@ wp goto -         # Go back to previous workspace`}</CodeBlock>
 
       <Paragraph>
         The order of workspaces matches your Spaces order (left to right).
+      </Paragraph>
+
+      <Paragraph>
+        For repo-owned recipes, write <Code>WALLPAPERS.tsx</Code>, then run{" "}
+        <Code>wp build</Code>. The generated <Code>WALLPAPERS.json</Code> can be applied{" "}
+        explicitly with <Code>wp apply --config ./WALLPAPERS.json --wallpapers</Code>.
       </Paragraph>
     </Section>
 

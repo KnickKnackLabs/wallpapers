@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Tutorial: Apply wallpaper to spaces demo"
+#MISE hide=true
 set -e
 
 # Check dependencies

@@ -1,6 +1,6 @@
 /** @jsxImportSource jsx-md */
 
-import { readdirSync, readFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 
 import {
@@ -14,32 +14,40 @@ import {
 
 const REPO_DIR = resolve(import.meta.dirname);
 
-// Count tasks (excluding _ helpers and test)
-function countTasks(dir: string, prefix = ""): string[] {
-  const tasks: string[] = [];
+type TaskInfo = { name: string; filePath: string; desc: string };
+
+function hiddenTask(filePath: string): boolean {
+  return readFileSync(filePath, "utf-8").includes("#MISE hide=true");
+}
+
+function taskDescription(filePath: string): string {
+  const content = readFileSync(filePath, "utf-8");
+  const match = content.match(/#MISE description="(.+?)"/);
+  return match?.[1] ?? "";
+}
+
+// Count public tasks, including namespace _default entrypoints and excluding hidden helpers.
+function collectTasks(dir: string, prefix = ""): TaskInfo[] {
+  const tasks: TaskInfo[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith("_")) continue;
     if (entry.name === "test") continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      tasks.push(...countTasks(full, `${prefix}${entry.name}:`));
-    } else {
-      tasks.push(`${prefix}${entry.name}`);
+      const defaultTask = join(full, "_default");
+      if (existsSync(defaultTask) && !hiddenTask(defaultTask)) {
+        tasks.push({ name: `${prefix}${entry.name}`, filePath: defaultTask, desc: taskDescription(defaultTask) });
+      }
+      tasks.push(...collectTasks(full, `${prefix}${entry.name}:`));
+    } else if (!entry.name.startsWith("_") && !hiddenTask(full)) {
+      tasks.push({ name: `${prefix}${entry.name}`, filePath: full, desc: taskDescription(full) });
     }
   }
   return tasks;
 }
 
 const taskDir = join(REPO_DIR, ".mise/tasks");
-const tasks = countTasks(taskDir);
-
-// Parse task descriptions
-const taskInfo = tasks.map((name) => {
-  const filePath = join(taskDir, name.replace(/:/g, "/"));
-  const content = readFileSync(filePath, "utf-8");
-  const match = content.match(/#MISE description="(.+?)"/);
-  return { name, desc: match?.[1] ?? "" };
-});
+const taskInfo = collectTasks(taskDir).sort((a, b) => a.name.localeCompare(b.name));
+const tasks = taskInfo.map((task) => task.name);
 
 // Count tests from .bats files
 const testDir = join(REPO_DIR, "test");
@@ -112,6 +120,7 @@ wp tutorial`}</CodeBlock>
       <CodeBlock lang="bash">{`wp                # Apply wallpaper (picker or --all)
 wp --all          # Apply wallpapers to all spaces from config
 wp quick          # Quick one-off wallpaper for current space
+wp snapshot       # Bootstrap WALLPAPERS.tsx from current Spaces
 wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
 wp apply --config ./WALLPAPERS.json --wallpapers
 wp goto           # Switch workspace (picker)
@@ -143,8 +152,11 @@ wp goto -         # Go back to previous workspace`}</CodeBlock>
 
       <Paragraph>
         For repo-owned recipes, write <Code>WALLPAPERS.tsx</Code>, then run{" "}
-        <Code>wp build</Code>. The generated <Code>WALLPAPERS.json</Code> can be applied{" "}
-        explicitly with <Code>wp apply --config ./WALLPAPERS.json --wallpapers</Code>.
+        <Code>wp build</Code>. To start from your current macOS layout, run{" "}
+        <Code>wp snapshot</Code>; it writes one starter zone per Space, with optional window
+        comments via <Code>wp snapshot --include-windows</Code>. The generated{" "}
+        <Code>WALLPAPERS.json</Code> can be applied explicitly with{" "}
+        <Code>wp apply --config ./WALLPAPERS.json --wallpapers</Code>.
       </Paragraph>
     </Section>
 

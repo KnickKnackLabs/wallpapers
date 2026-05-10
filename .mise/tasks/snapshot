@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+#MISE description="Snapshot current macOS Spaces into a starter WALLPAPERS.tsx"
+#USAGE flag "--out <out>" help="TSX output file (default: WALLPAPERS.tsx in caller directory)"
+#USAGE flag "--json" help="Print normalized snapshot JSON instead of writing TSX"
+#USAGE flag "--force" help="Overwrite an existing TSX output file"
+#USAGE flag "--include-windows" help="Include current windows in JSON and TSX comments"
+#USAGE example "wp snapshot" header="Create ./WALLPAPERS.tsx from current Spaces"
+#USAGE example "wp snapshot --force --out recipes/current.tsx" header="Overwrite an explicit output path"
+#USAGE example "wp snapshot --json --include-windows" header="Inspect normalized Spaces and windows"
+set -euo pipefail
+
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
+
+snapshot_json=false
+snapshot_force=false
+snapshot_include_windows=false
+snapshot_out=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --json)
+      snapshot_json=true
+      ;;
+    --force)
+      snapshot_force=true
+      ;;
+    --include-windows)
+      snapshot_include_windows=true
+      ;;
+    --out)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "error: --out requires a value" >&2
+        exit 2
+      fi
+      snapshot_out="$1"
+      ;;
+    --out=*)
+      snapshot_out="${1#--out=}"
+      ;;
+    -h|--help)
+      echo "Usage: wp snapshot [--json] [--out <out>] [--force] [--include-windows]" >&2
+      exit 2
+      ;;
+    *)
+      echo "error: unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+if [ "$snapshot_json" = "true" ] && { [ -n "$snapshot_out" ] || [ "$snapshot_force" = "true" ]; }; then
+  echo "error: --json cannot be combined with --out or --force" >&2
+  exit 2
+fi
+
+butthair_cmd="${BUTTHAIR:-butthair}"
+if ! command -v "$butthair_cmd" >/dev/null 2>&1; then
+  echo "error: butthair not found. Install with: shiv install butthair" >&2
+  exit 1
+fi
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+spaces_json="$tmp_dir/spaces.json"
+if ! "$butthair_cmd" spaces:list --json > "$spaces_json"; then
+  echo "error: could not read spaces from butthair" >&2
+  exit 1
+fi
+
+args=("--spaces" "$spaces_json")
+
+if [ "$snapshot_include_windows" = "true" ]; then
+  windows_json="$tmp_dir/windows.json"
+  if ! "$butthair_cmd" windows:list --json > "$windows_json"; then
+    echo "error: could not read windows from butthair" >&2
+    exit 1
+  fi
+  args+=("--windows" "$windows_json")
+fi
+
+if [ "$snapshot_json" = "true" ]; then
+  args+=("--json")
+else
+  if [ -n "$snapshot_out" ]; then
+    out_path=$(wallpapers_resolve_path "$snapshot_out")
+  else
+    out_path=$(wallpapers_resolve_path "WALLPAPERS.tsx")
+  fi
+
+  if [ -e "$out_path" ] && [ "$snapshot_force" != "true" ]; then
+    echo "error: output already exists: $out_path" >&2
+    echo "rerun with --force to overwrite" >&2
+    exit 1
+  fi
+
+  printf 'out:    %s\n' "$out_path"
+  args+=("--out" "$out_path")
+fi
+
+NODE_PATH="${MISE_CONFIG_ROOT}/tsx-runtime" \
+  bun "${MISE_CONFIG_ROOT}/tsx-runtime/snapshot.ts" "${args[@]}"

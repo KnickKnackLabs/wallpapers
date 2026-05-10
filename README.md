@@ -25,7 +25,7 @@ This tool generates wallpapers with labels so you can tell them apart.
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
 ![tasks: 22](https://img.shields.io/badge/tasks-22-blue?style=flat)
-![tests: 26](https://img.shields.io/badge/tests-26-green?style=flat)
+![tests: 27](https://img.shields.io/badge/tests-27-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -97,35 +97,35 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 
 | Task | Description |
 | --- | --- |
+| `ai` | Agent instructions for helping users |
 | `apply` | Apply workspace config (wallpapers, apps, or both) |
 | `apply:undo` | Close windows created by the last 'apply --apps' |
+| `build` | Build WALLPAPERS.tsx into a versioned JSON config |
+| `clean` | Remove all generated wallpapers |
+| `cli` | Run generator directly with arguments |
+| `config:edit` | Edit config file in your editor |
+| `config:init` | Initialize config file with example workspaces |
+| `generate` | Generate a wallpaper interactively |
+| `goto` | Switch to a workspace by name |
+| `hammerspoon:config` | Install wp workspace integration into Hammerspoon config |
+| `help` | Show generator CLI help |
+| `info:list` | List generated wallpapers |
+| `info:resolution` | Show your screen resolution |
+| `info:space` | Show current desktop space |
+| `info:wallpaper` | Show current wallpaper file path |
+| `open` | Open the wallpapers directory in Finder |
+| `quick` | Quick generate with just a name (auto-detects screen resolution) |
+| `readme` | Regenerate README.md from README.tsx |
+| `shell` | Output shell configuration (use with eval) |
 | `snapshot` | Snapshot current macOS Spaces into a starter WALLPAPERS.tsx |
 | `tutorial` | Interactive tutorial to learn the wallpaper generator |
-| `goto` | Switch to a workspace by name |
-| `config:init` | Initialize config file with example workspaces |
-| `config:edit` | Edit config file in your editor |
-| `shell` | Output shell configuration (use with eval) |
-| `quick` | Quick generate with just a name (auto-detects screen resolution) |
-| `cli` | Run generator directly with arguments |
-| `readme` | Regenerate README.md from README.tsx |
-| `info:resolution` | Show your screen resolution |
-| `info:list` | List generated wallpapers |
-| `info:wallpaper` | Show current wallpaper file path |
-| `info:space` | Show current desktop space |
-| `clean` | Remove all generated wallpapers |
-| `ai` | Agent instructions for helping users |
-| `generate` | Generate a wallpaper interactively |
-| `build` | Build WALLPAPERS.tsx into a versioned JSON config |
-| `hammerspoon:config` | Install wp workspace integration into Hammerspoon config |
-| `open` | Open the wallpapers directory in Finder |
-| `help` | Show generator CLI help |
 
 ## Development
 
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 26 tests
+mise run test   # 27 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

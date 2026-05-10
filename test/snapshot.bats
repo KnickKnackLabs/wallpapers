@@ -131,6 +131,17 @@ BASH
   [ "$output" = "Ghostty" ]
 }
 
+
+@test "snapshot ignores inherited usage variables from parent mise sessions" {
+  usage_json=true usage_out=stale.tsx usage_force=true usage_include_windows=true run wallpapers snapshot
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"out:    $CALLER_PWD/WALLPAPERS.tsx"* ]]
+  [ -f "$CALLER_PWD/WALLPAPERS.tsx" ]
+  run grep -F "windows:" "$CALLER_PWD/WALLPAPERS.tsx"
+  [ "$status" -ne 0 ]
+}
+
 @test "snapshot --json rejects output flags" {
   run wallpapers snapshot --json --out current.tsx
 

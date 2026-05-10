@@ -46,7 +46,7 @@ function collectTasks(dir: string, prefix = ""): TaskInfo[] {
 }
 
 const taskDir = join(REPO_DIR, ".mise/tasks");
-const taskInfo = collectTasks(taskDir);
+const taskInfo = collectTasks(taskDir).sort((a, b) => a.name.localeCompare(b.name));
 const tasks = taskInfo.map((task) => task.name);
 
 // Count tests from .bats files

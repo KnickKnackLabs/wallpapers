@@ -11,7 +11,46 @@ set -euo pipefail
 
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-if [ "${usage_json:-false}" = "true" ] && { [ -n "${usage_out:-}" ] || [ "${usage_force:-false}" = "true" ]; }; then
+snapshot_json=false
+snapshot_force=false
+snapshot_include_windows=false
+snapshot_out=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --json)
+      snapshot_json=true
+      ;;
+    --force)
+      snapshot_force=true
+      ;;
+    --include-windows)
+      snapshot_include_windows=true
+      ;;
+    --out)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "error: --out requires a value" >&2
+        exit 2
+      fi
+      snapshot_out="$1"
+      ;;
+    --out=*)
+      snapshot_out="${1#--out=}"
+      ;;
+    -h|--help)
+      echo "Usage: wp snapshot [--json] [--out <out>] [--force] [--include-windows]" >&2
+      exit 2
+      ;;
+    *)
+      echo "error: unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+if [ "$snapshot_json" = "true" ] && { [ -n "$snapshot_out" ] || [ "$snapshot_force" = "true" ]; }; then
   echo "error: --json cannot be combined with --out or --force" >&2
   exit 2
 fi
@@ -33,7 +72,7 @@ fi
 
 args=("--spaces" "$spaces_json")
 
-if [ "${usage_include_windows:-false}" = "true" ]; then
+if [ "$snapshot_include_windows" = "true" ]; then
   windows_json="$tmp_dir/windows.json"
   if ! "$butthair_cmd" windows:list --json > "$windows_json"; then
     echo "error: could not read windows from butthair" >&2
@@ -42,16 +81,16 @@ if [ "${usage_include_windows:-false}" = "true" ]; then
   args+=("--windows" "$windows_json")
 fi
 
-if [ "${usage_json:-false}" = "true" ]; then
+if [ "$snapshot_json" = "true" ]; then
   args+=("--json")
 else
-  if [ -n "${usage_out:-}" ]; then
-    out_path=$(wallpapers_resolve_path "$usage_out")
+  if [ -n "$snapshot_out" ]; then
+    out_path=$(wallpapers_resolve_path "$snapshot_out")
   else
     out_path=$(wallpapers_resolve_path "WALLPAPERS.tsx")
   fi
 
-  if [ -e "$out_path" ] && [ "${usage_force:-false}" != "true" ]; then
+  if [ -e "$out_path" ] && [ "$snapshot_force" != "true" ]; then
     echo "error: output already exists: $out_path" >&2
     echo "rerun with --force to overwrite" >&2
     exit 1

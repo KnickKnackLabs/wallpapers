@@ -24,8 +24,8 @@ This tool generates wallpapers with labels so you can tell them apart.
 
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
-![tasks: 25](https://img.shields.io/badge/tasks-25-blue?style=flat)
-![tests: 18](https://img.shields.io/badge/tests-18-green?style=flat)
+![tasks: 22](https://img.shields.io/badge/tasks-22-blue?style=flat)
+![tests: 26](https://img.shields.io/badge/tests-26-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -49,6 +49,7 @@ wp tutorial
 wp                # Apply wallpaper (picker or --all)
 wp --all          # Apply wallpapers to all spaces from config
 wp quick          # Quick one-off wallpaper for current space
+wp snapshot       # Bootstrap WALLPAPERS.tsx from current Spaces
 wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
 wp apply --config ./WALLPAPERS.json --wallpapers
 wp goto           # Switch workspace (picker)
@@ -76,7 +77,7 @@ Create your config with `wp config init`, then edit with `wp config edit`:
 
 The order of workspaces matches your Spaces order (left to right).
 
-For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. The generated `WALLPAPERS.json` can be applied explicitly with `wp apply --config ./WALLPAPERS.json --wallpapers`.
+For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. To start from your current macOS layout, run `wp snapshot`; it writes one starter zone per Space, with optional window comments via `wp snapshot --include-windows`. The generated `WALLPAPERS.json` can be applied explicitly with `wp apply --config ./WALLPAPERS.json --wallpapers`.
 
 ## Resolution presets
 
@@ -96,13 +97,10 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 
 | Task | Description |
 | --- | --- |
+| `apply` | Apply workspace config (wallpapers, apps, or both) |
 | `apply:undo` | Close windows created by the last 'apply --apps' |
-| `tutorial:apply` | Tutorial: Apply wallpaper to spaces demo |
-| `tutorial:navigate` | Tutorial: Workspace navigation demo |
-| `tutorial:intro` | Tutorial: Introduction and overview |
-| `tutorial:config` | Tutorial: Configuration setup walkthrough |
-| `tutorial:generate` | Tutorial: Wallpaper generation demo |
-| `tutorial:summary` | Tutorial: Command reference and completion |
+| `snapshot` | Snapshot current macOS Spaces into a starter WALLPAPERS.tsx |
+| `tutorial` | Interactive tutorial to learn the wallpaper generator |
 | `goto` | Switch to a workspace by name |
 | `config:init` | Initialize config file with example workspaces |
 | `config:edit` | Edit config file in your editor |
@@ -127,7 +125,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 18 tests
+mise run test   # 26 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

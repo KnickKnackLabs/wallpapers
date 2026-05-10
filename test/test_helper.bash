@@ -8,6 +8,16 @@ REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
 # Source shared library
 source "$REPO_ROOT/lib/common.sh"
 
+# Call wallpapers through mise so tests exercise the real task path.
+wallpapers() {
+  local caller="${WALLPAPERS_CALLER_PWD:-${CALLER_PWD:-$PWD}}"
+  (
+    cd "$REPO_ROOT" || exit
+    WALLPAPERS_CALLER_PWD="$caller" CALLER_PWD="$caller" mise run -q "$@"
+  )
+}
+export -f wallpapers
+
 # Create a minimal config file in a temp directory.
 # Sets WALLPAPERS_CONFIG_FILE and WALLPAPERS_CONFIG_DIR for the test.
 create_test_config() {

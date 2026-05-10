@@ -24,8 +24,8 @@ This tool generates wallpapers with labels so you can tell them apart.
 
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
-![tasks: 24](https://img.shields.io/badge/tasks-24-blue?style=flat)
-![tests: 14](https://img.shields.io/badge/tests-14-green?style=flat)
+![tasks: 25](https://img.shields.io/badge/tasks-25-blue?style=flat)
+![tests: 18](https://img.shields.io/badge/tests-18-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -49,6 +49,8 @@ wp tutorial
 wp                # Apply wallpaper (picker or --all)
 wp --all          # Apply wallpapers to all spaces from config
 wp quick          # Quick one-off wallpaper for current space
+wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
+wp apply --config ./WALLPAPERS.json --wallpapers
 wp goto           # Switch workspace (picker)
 wp goto code      # Switch to workspace by name
 wp goto -         # Go back to previous workspace
@@ -73,6 +75,8 @@ Create your config with `wp config init`, then edit with `wp config edit`:
 ```
 
 The order of workspaces matches your Spaces order (left to right).
+
+For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. The generated `WALLPAPERS.json` can be applied explicitly with `wp apply --config ./WALLPAPERS.json --wallpapers`.
 
 ## Resolution presets
 
@@ -113,6 +117,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 | `clean` | Remove all generated wallpapers |
 | `ai` | Agent instructions for helping users |
 | `generate` | Generate a wallpaper interactively |
+| `build` | Build WALLPAPERS.tsx into a versioned JSON config |
 | `hammerspoon:config` | Install wp workspace integration into Hammerspoon config |
 | `open` | Open the wallpapers directory in Finder |
 | `help` | Show generator CLI help |
@@ -122,7 +127,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 14 tests
+mise run test   # 18 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

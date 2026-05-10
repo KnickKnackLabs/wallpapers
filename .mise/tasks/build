@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#MISE description="Build WALLPAPERS.tsx into a versioned JSON config"
+#USAGE flag "--source <source>" help="TSX source file (default: WALLPAPERS.tsx in caller directory)"
+#USAGE flag "--out <out>" help="JSON output file (default: WALLPAPERS.json next to source)"
+#USAGE flag "--check" help="Fail if the output file is missing or out of date"
+#USAGE example "wp build" header="Build ./WALLPAPERS.tsx to ./WALLPAPERS.json"
+#USAGE example "wp build --source recipes/agents.tsx --out .wallpapers/agents.json" header="Build explicit paths"
+set -euo pipefail
+
+source "${MISE_CONFIG_ROOT}/lib/common.sh"
+
+caller_dir=$(wallpapers_caller_dir)
+source_path=$(wallpapers_resolve_path "${usage_source:-WALLPAPERS.tsx}")
+
+if [ -n "${usage_out:-}" ]; then
+  out_path=$(wallpapers_resolve_path "$usage_out")
+else
+  out_path="${source_path%.*}.json"
+fi
+
+if [ ! -f "$source_path" ]; then
+  echo "error: source file not found: $source_path" >&2
+  exit 1
+fi
+
+printf 'source: %s\n' "$source_path"
+printf 'out:    %s\n' "$out_path"
+
+args=("--source" "$source_path" "--out" "$out_path")
+if [ "${usage_check:-false}" = "true" ]; then
+  args+=("--check")
+fi
+
+(
+  cd "$caller_dir" || exit
+  NODE_PATH="${MISE_CONFIG_ROOT}/tsx-runtime" \
+    bun "${MISE_CONFIG_ROOT}/tsx-runtime/build.ts" "${args[@]}"
+)

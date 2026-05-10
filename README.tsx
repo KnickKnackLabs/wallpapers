@@ -29,7 +29,7 @@ function taskDescription(filePath: string): string {
 // Count public tasks, including namespace _default entrypoints and excluding hidden helpers.
 function collectTasks(dir: string, prefix = ""): TaskInfo[] {
   const tasks: TaskInfo[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (entry.name === "test") continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {

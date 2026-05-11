@@ -68,6 +68,18 @@ TSX
   [[ "$output" == *"WALLPAPERS.json is missing"* ]]
 }
 
+@test "build ignores inherited usage variables from parent mise sessions" {
+  write_recipe
+
+  usage_check=true usage_out=stale.json usage_source=missing.tsx run wallpapers build
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"source: $CALLER_PWD/WALLPAPERS.tsx"* ]]
+  [[ "$output" == *"out:    $CALLER_PWD/WALLPAPERS.json"* ]]
+  [ -f "$CALLER_PWD/WALLPAPERS.json" ]
+  [ ! -e "$CALLER_PWD/stale.json" ]
+}
+
 @test "build accepts explicit source and output paths relative to caller" {
   mkdir -p "$CALLER_PWD/recipes"
   cat > "$CALLER_PWD/recipes/small.tsx" <<'TSX'
@@ -89,4 +101,40 @@ TSX
 
   run jq -r '.spaces[0].zones[0].name' "$CALLER_PWD/.wallpapers/small.json"
   [ "$output" = "one" ]
+}
+
+@test "build passes remaining arguments to WALLPAPERS.tsx" {
+  cat > "$CALLER_PWD/WALLPAPERS.tsx" <<'TSX'
+import { parseArgs } from "util";
+import { WorkspaceSet, Space, Zone } from "wallpapers";
+
+const { values } = parseArgs({
+  args: Bun.argv.slice(2),
+  options: {
+    set: { type: "string", default: "quick" },
+  },
+  strict: true,
+});
+
+const sets = {
+  quick: (
+    <WorkspaceSet name="quick">
+      <Space name="quick"><Zone name="quick" /></Space>
+    </WorkspaceSet>
+  ),
+  brownie: (
+    <WorkspaceSet name="brownie">
+      <Space name="brownie"><Zone name="brownie" /></Space>
+    </WorkspaceSet>
+  ),
+};
+
+export default sets[values.set as keyof typeof sets];
+TSX
+
+  run wallpapers build --set brownie
+
+  [ "$status" -eq 0 ]
+  run jq -r '.name' "$CALLER_PWD/WALLPAPERS.json"
+  [ "$output" = "brownie" ]
 }

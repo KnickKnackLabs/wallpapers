@@ -3,17 +3,66 @@
 #USAGE flag "--source <source>" help="TSX source file (default: WALLPAPERS.tsx in caller directory)"
 #USAGE flag "--out <out>" help="JSON output file (default: WALLPAPERS.json next to source)"
 #USAGE flag "--check" help="Fail if the output file is missing or out of date"
+#USAGE arg "[args]" var=#true help="Arguments to pass to WALLPAPERS.tsx"
 #USAGE example "wp build" header="Build ./WALLPAPERS.tsx to ./WALLPAPERS.json"
 #USAGE example "wp build --source recipes/agents.tsx --out .wallpapers/agents.json" header="Build explicit paths"
+#USAGE example "wp build --set quick" header="Pass arguments through to WALLPAPERS.tsx"
 set -euo pipefail
 
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
-caller_dir=$(wallpapers_caller_dir)
-source_path=$(wallpapers_resolve_path "${usage_source:-WALLPAPERS.tsx}")
+build_source="WALLPAPERS.tsx"
+build_out=""
+build_check=false
+recipe_args=()
 
-if [ -n "${usage_out:-}" ]; then
-  out_path=$(wallpapers_resolve_path "$usage_out")
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --source)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "error: --source requires a value" >&2
+        exit 2
+      fi
+      build_source="$1"
+      ;;
+    --source=*)
+      build_source="${1#--source=}"
+      ;;
+    --out)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "error: --out requires a value" >&2
+        exit 2
+      fi
+      build_out="$1"
+      ;;
+    --out=*)
+      build_out="${1#--out=}"
+      ;;
+    --check)
+      build_check=true
+      ;;
+    --)
+      shift
+      while [ "$#" -gt 0 ]; do
+        recipe_args+=("$1")
+        shift
+      done
+      break
+      ;;
+    *)
+      recipe_args+=("$1")
+      ;;
+  esac
+  shift
+done
+
+caller_dir=$(wallpapers_caller_dir)
+source_path=$(wallpapers_resolve_path "$build_source")
+
+if [ -n "$build_out" ]; then
+  out_path=$(wallpapers_resolve_path "$build_out")
 else
   out_path="${source_path%.*}.json"
 fi
@@ -27,8 +76,11 @@ printf 'source: %s\n' "$source_path"
 printf 'out:    %s\n' "$out_path"
 
 args=("--source" "$source_path" "--out" "$out_path")
-if [ "${usage_check:-false}" = "true" ]; then
+if [ "$build_check" = "true" ]; then
   args+=("--check")
+fi
+if [ "${#recipe_args[@]}" -gt 0 ]; then
+  args+=("--" "${recipe_args[@]}")
 fi
 
 (

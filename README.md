@@ -24,8 +24,8 @@ This tool generates wallpapers with labels so you can tell them apart.
 
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
-![tasks: 22](https://img.shields.io/badge/tasks-22-blue?style=flat)
-![tests: 29](https://img.shields.io/badge/tests-29-green?style=flat)
+![tasks: 23](https://img.shields.io/badge/tasks-23-blue?style=flat)
+![tests: 33](https://img.shields.io/badge/tests-33-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -53,6 +53,7 @@ wp snapshot       # Bootstrap WALLPAPERS.tsx from current Spaces
 wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
 wp build --set quick  # Pass arguments to WALLPAPERS.tsx
 wp apply --config ./WALLPAPERS.json --wallpapers
+wp apply --config ./WALLPAPERS.json --wallpapers --yes  # Add missing Spaces non-interactively
 wp goto           # Switch workspace (picker)
 wp goto code      # Switch to workspace by name
 wp goto -         # Go back to previous workspace
@@ -78,7 +79,7 @@ Create your config with `wp config init`, then edit with `wp config edit`:
 
 The order of workspaces matches your Spaces order (left to right).
 
-For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. Extra build arguments are forwarded to the TSX file, so a recipe can parse `Bun.argv.slice(2)` and expose variants such as `wp build --set quick`. To start from your current macOS layout, run `wp snapshot`; it writes one starter zone per Space, with optional window comments via `wp snapshot --include-windows`. The generated `WALLPAPERS.json` can be applied explicitly with `wp apply --config ./WALLPAPERS.json --wallpapers`.
+For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. Extra build arguments are forwarded to the TSX file, so a recipe can parse `Bun.argv.slice(2)` and expose variants such as `wp build --set quick`. To start from your current macOS layout, run `wp snapshot`; it writes one starter zone per Space, with optional window comments via `wp snapshot --include-windows`. The generated `WALLPAPERS.json` can be applied explicitly with `wp apply --config ./WALLPAPERS.json --wallpapers`. If the config has more workspaces than macOS has Spaces, `wp apply` can add the missing Spaces after interactive confirmation; headless callers must pass `--yes` (or `-y`) instead of relying on a prompt.
 
 ## Resolution presets
 
@@ -114,6 +115,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 | `info:resolution` | Show your screen resolution |
 | `info:space` | Show current desktop space |
 | `info:wallpaper` | Show current wallpaper file path |
+| `lint` | Run codebase convention lints |
 | `open` | Open the wallpapers directory in Finder |
 | `quick` | Quick generate with just a name (auto-detects screen resolution) |
 | `readme` | Regenerate README.md from README.tsx |
@@ -126,7 +128,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 29 tests
+mise run test   # 33 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

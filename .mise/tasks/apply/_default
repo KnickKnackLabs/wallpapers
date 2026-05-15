@@ -7,21 +7,34 @@
 #USAGE flag "--apps" help="Only launch and position apps"
 #USAGE flag "--config <config>" help="Config file to apply (default: ~/.config/wallpapers/config.json)"
 #USAGE flag "--clean" help="Close previous app windows before applying"
+#USAGE flag "--yes" help="Approve Space count changes or mismatch continuation without prompting"
+#USAGE flag "-y" help="Alias for --yes"
 set -euo pipefail
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
+
+BUTTHAIR="${BUTTHAIR:-butthair}"
+GUM="${GUM:-gum}"
+SWIFT="${SWIFT:-swift}"
+OSASCRIPT="${OSASCRIPT:-osascript}"
+PGREP="${PGREP:-pgrep}"
+HS_CLI="${HS_CLI:-/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs}"
+
+YES=false
+if [ "${usage_yes:-false}" = "true" ] || [ "${usage_y:-false}" = "true" ]; then
+    YES=true
+fi
 
 if [ -n "${usage_config:-}" ]; then
     WALLPAPERS_CONFIG_FILE=$(wallpapers_resolve_path "$usage_config")
 fi
 
 require_config "$WALLPAPERS_CONFIG_FILE"
-require_command butthair "Install with: shiv install butthair"
+require_command "$BUTTHAIR" "Install with: shiv install butthair"
+require_command "$GUM"
 
 # Require Hammerspoon via butthair
-APP_PATH="/Applications/Hammerspoon.app"
-HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
-if [ ! -x "$HS_CLI" ] || ! pgrep -x "Hammerspoon" > /dev/null; then
-    gum style --foreground 196 "❌ Hammerspoon not running. Run: butthair setup"
+if [ ! -x "$HS_CLI" ] || ! "$PGREP" -x "Hammerspoon" > /dev/null; then
+    "$GUM" style --foreground 196 "❌ Hammerspoon not running. Run: butthair setup"
     exit 1
 fi
 
@@ -32,6 +45,96 @@ if [ "${usage_wallpapers:-}" = "true" ] || [ "${usage_apps:-}" = "true" ]; then
     DO_WALLPAPERS="${usage_wallpapers:-false}"
     DO_APPS="${usage_apps:-false}"
 fi
+
+is_interactive() {
+    [ -t 0 ] && [ -t 1 ]
+}
+
+confirm_or_require_yes() {
+    local prompt="$1"
+
+    if [ "$YES" = "true" ]; then
+        return 0
+    fi
+
+    if ! is_interactive; then
+        "$GUM" style --foreground 196 "❌ Confirmation required"
+        echo "$prompt"
+        echo "Re-run with --yes (or -y) to approve this non-interactively."
+        exit 2
+    fi
+
+    "$GUM" confirm "$prompt"
+}
+
+space_count() {
+    local count
+    if ! count=$("$BUTTHAIR" spaces:list -- -j 2>/dev/null | jq 'length'); then
+        "$GUM" style --foreground 196 "❌ Could not get space count from butthair"
+        exit 1
+    fi
+    if [ -z "$count" ] || [ "$count" = "0" ]; then
+        "$GUM" style --foreground 196 "❌ Could not get space count from butthair"
+        exit 1
+    fi
+    printf '%s\n' "$count"
+}
+
+add_spaces() {
+    local missing="$1"
+    local i=1
+    local output
+
+    while [ "$i" -le "$missing" ]; do
+        if ! output=$("$BUTTHAIR" spaces:add < /dev/null 2>&1); then
+            "$GUM" style --foreground 196 "❌ Failed to add Space $i/$missing"
+            echo "$output"
+            exit 1
+        fi
+        if [[ "$output" == error:* ]]; then
+            "$GUM" style --foreground 196 "❌ Failed to add Space $i/$missing"
+            echo "$output"
+            exit 1
+        fi
+        echo "  added space $i/$missing: $output"
+        sleep 0.3
+        i=$((i + 1))
+    done
+}
+
+reconcile_space_count() {
+    local config_count="$1"
+    local actual_count="$2"
+    local diff
+
+    if [ "$config_count" -gt "$actual_count" ]; then
+        diff=$((config_count - actual_count))
+        "$GUM" style --foreground 226 "⚠️  Config has $config_count workspaces, but macOS has $actual_count Spaces"
+        "$GUM" style --foreground 245 "wallpapers can add $diff Space(s) before applying."
+        echo ""
+        if ! confirm_or_require_yes "Add $diff Space(s) now?"; then
+            exit 0
+        fi
+        add_spaces "$diff"
+        actual_count=$(space_count)
+        if [ "$actual_count" -lt "$config_count" ]; then
+            "$GUM" style --foreground 196 "❌ Expected $config_count Spaces after adding, but macOS has $actual_count"
+            exit 1
+        fi
+    fi
+
+    if [ "$config_count" -lt "$actual_count" ]; then
+        diff=$((actual_count - config_count))
+        "$GUM" style --foreground 226 "⚠️  Config has $config_count workspaces, but macOS has $actual_count Spaces"
+        "$GUM" style --foreground 245 "wallpapers will apply the first $config_count wallpaper(s) and leave $diff extra Space(s) unchanged."
+        echo ""
+        if ! confirm_or_require_yes "Continue with $diff extra Space(s) unchanged?"; then
+            exit 0
+        fi
+    fi
+
+    SPACE_COUNT="$actual_count"
+}
 
 # Alternate wallpaper filename suffix to bust macOS cache.
 cache_bust() {
@@ -54,36 +157,12 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
 {
     CONFIG_COUNT=$(jq 'if .spaces then .spaces | length elif .workspaces then .workspaces | length else 0 end' "$WALLPAPERS_CONFIG_FILE")
 
-    SPACE_COUNT=$(butthair spaces:list -- -j 2>/dev/null | jq 'length')
-    if [ -z "$SPACE_COUNT" ] || [ "$SPACE_COUNT" = "0" ]; then
-        gum style --foreground 196 "❌ Could not get space count from butthair"
-        exit 1
-    fi
-
-    if [ "$CONFIG_COUNT" -ne "$SPACE_COUNT" ]; then
-        gum style --foreground 226 "⚠️  Mismatch: config has $CONFIG_COUNT workspaces, but you have $SPACE_COUNT spaces"
-        echo ""
-        if [ "$CONFIG_COUNT" -gt "$SPACE_COUNT" ]; then
-            DIFF=$((CONFIG_COUNT - SPACE_COUNT))
-            gum style --foreground 245 "To add $DIFF space(s):"
-            echo "  1. Open Mission Control (Ctrl+Up or swipe up with 3 fingers)"
-            echo "  2. Hover over the top row and click the '+' button"
-            echo "  3. Repeat until you have $CONFIG_COUNT spaces"
-        else
-            DIFF=$((SPACE_COUNT - CONFIG_COUNT))
-            gum style --foreground 245 "You have $DIFF extra space(s). Either:"
-            echo "  • Add more workspaces to your config: wp config edit"
-            echo "  • Or remove spaces: Mission Control → hover space → click X"
-        fi
-        echo ""
-        if ! gum confirm "Continue anyway?"; then
-            exit 0
-        fi
-    fi
+    SPACE_COUNT=$(space_count)
+    reconcile_space_count "$CONFIG_COUNT" "$SPACE_COUNT"
 
     # --- Wallpapers ---
     if [ "$DO_WALLPAPERS" = "true" ]; then
-        OUTPUT=$(swift run setup -- --config "$WALLPAPERS_CONFIG_FILE" --width "$SCREEN_W" --height "$SCREEN_H")
+        OUTPUT=$("$SWIFT" run setup -- --config "$WALLPAPERS_CONFIG_FILE" --width "$SCREEN_W" --height "$SCREEN_H")
         FILES=()
         while IFS= read -r line; do
             if [[ "$line" == FILE:* ]]; then
@@ -94,34 +173,34 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
         done <<< "$OUTPUT"
 
         if [ ${#FILES[@]} -eq 0 ]; then
-            gum style --foreground 196 "❌ No wallpapers to apply"
+            "$GUM" style --foreground 196 "❌ No wallpapers to apply"
             exit 1
         fi
 
-        gum style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
+        "$GUM" style --foreground 245 "Applying ${#FILES[@]} wallpaper(s) to spaces..."
 
-        CURRENT_SPACE=$(butthair spaces:current -- -i 2>/dev/null)
+        CURRENT_SPACE=$("$BUTTHAIR" spaces:current -- -i 2>/dev/null)
 
         for i in "${!FILES[@]}"; do
             FILE="${FILES[$i]}"
             TARGET_SPACE=$((i + 1))
-            butthair spaces:goto -- "$TARGET_SPACE" < /dev/null 2>/dev/null
+            "$BUTTHAIR" spaces:goto -- "$TARGET_SPACE" < /dev/null 2>/dev/null
             sleep 0.3
             SUFFIXED=$(cache_bust "$FILE")
             cp "$FILE" "$SUFFIXED"
             echo "  wallpaper $((i+1))/${#FILES[@]}: $(basename "$SUFFIXED")"
-            osascript -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
+            "$OSASCRIPT" -e "tell application \"System Events\" to set picture of current desktop to \"$SUFFIXED\""
             sleep 0.3
         done
 
-        butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
-        gum style --foreground 46 "✅ Wallpapers applied"
+        "$BUTTHAIR" spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
+        "$GUM" style --foreground 46 "✅ Wallpapers applied"
     fi
 
     # --- Apps ---
     if [ "$DO_APPS" = "true" ]; then
         # Get screen usable area from Hammerspoon (accounts for menu bar)
-        SCREEN_JSON=$(butthair screen:info -- -j 2>/dev/null)
+        SCREEN_JSON=$("$BUTTHAIR" screen:info -- -j 2>/dev/null)
         USABLE_W=$(echo "$SCREEN_JSON" | jq '.usable.w')
         USABLE_H=$(echo "$SCREEN_JSON" | jq '.usable.h')
         USABLE_Y=$(echo "$SCREEN_JSON" | jq '.usable.y')
@@ -131,12 +210,12 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
         STATE_FILE="$HOME/.local/share/wallpapers/.apply-state"
         mkdir -p "$(dirname "$STATE_FILE")"
 
-        CURRENT_SPACE=$(butthair spaces:current -- -i 2>/dev/null)
+        CURRENT_SPACE=$("$BUTTHAIR" spaces:current -- -i 2>/dev/null)
 
         # Optionally close previous windows first
         if [ "${usage_clean:-false}" = "true" ] && [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
             PREV_COUNT=$(grep -c . "$STATE_FILE")
-            gum style --foreground 245 "Closing $PREV_COUNT previous window(s)..."
+            "$GUM" style --foreground 245 "Closing $PREV_COUNT previous window(s)..."
             PREV_SPACES=()
             PREV_WINS=()
             while IFS= read -r line; do
@@ -147,20 +226,20 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
             PREV_LAST_SPACE=""
             for i in "${!PREV_WINS[@]}"; do
                 if [ "${PREV_SPACES[$i]}" != "$PREV_LAST_SPACE" ]; then
-                    if ! butthair spaces:goto -- "${PREV_SPACES[$i]}" < /dev/null 2>/dev/null; then
+                    if ! "$BUTTHAIR" spaces:goto -- "${PREV_SPACES[$i]}" < /dev/null 2>/dev/null; then
                         : # Window cleanup is best-effort; continue closing what we can.
                     fi
                     sleep 0.3
                     PREV_LAST_SPACE="${PREV_SPACES[$i]}"
                 fi
-                if ! butthair windows:close -- "${PREV_WINS[$i]}" < /dev/null 2>/dev/null; then
+                if ! "$BUTTHAIR" windows:close -- "${PREV_WINS[$i]}" < /dev/null 2>/dev/null; then
                     : # Window may already be gone.
                 fi
             done
         fi
         : > "$STATE_FILE"
 
-        gum style --foreground 245 "Positioning apps..."
+        "$GUM" style --foreground 245 "Positioning apps..."
 
         for s in $(seq 0 $((CONFIG_COUNT - 1))); do
             SPACE_NUM=$((s + 1))
@@ -172,7 +251,7 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
             [ "$TOTAL_APPS" -eq 0 ] && continue
 
             # Navigate to this space
-            butthair spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null
+            "$BUTTHAIR" spaces:goto -- "$SPACE_NUM" < /dev/null 2>/dev/null
             sleep 0.5
 
             # Zone bounds math (matches WallpaperKit/Generator.swift)
@@ -269,8 +348,8 @@ return tostring(win:id())
             done
         done
 
-        butthair spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
-        gum style --foreground 46 "✅ Apps positioned"
+        "$BUTTHAIR" spaces:goto -- "$CURRENT_SPACE" < /dev/null 2>/dev/null
+        "$GUM" style --foreground 46 "✅ Apps positioned"
     fi
 
 }

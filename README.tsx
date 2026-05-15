@@ -124,6 +124,7 @@ wp snapshot       # Bootstrap WALLPAPERS.tsx from current Spaces
 wp build          # Compile WALLPAPERS.tsx to WALLPAPERS.json
 wp build --set quick  # Pass arguments to WALLPAPERS.tsx
 wp apply --config ./WALLPAPERS.json --wallpapers
+wp apply --config ./WALLPAPERS.json --wallpapers --yes  # Add missing Spaces non-interactively
 wp goto           # Switch workspace (picker)
 wp goto code      # Switch to workspace by name
 wp goto -         # Go back to previous workspace`}</CodeBlock>
@@ -159,7 +160,10 @@ wp goto -         # Go back to previous workspace`}</CodeBlock>
         <Code>wp snapshot</Code>; it writes one starter zone per Space, with optional window
         comments via <Code>wp snapshot --include-windows</Code>. The generated{" "}
         <Code>WALLPAPERS.json</Code> can be applied explicitly with{" "}
-        <Code>wp apply --config ./WALLPAPERS.json --wallpapers</Code>.
+        <Code>wp apply --config ./WALLPAPERS.json --wallpapers</Code>. If the config has
+        more workspaces than macOS has Spaces, <Code>wp apply</Code> can add the missing
+        Spaces after interactive confirmation; headless callers must pass <Code>--yes</Code>{" "}
+        (or <Code>-y</Code>) instead of relying on a prompt.
       </Paragraph>
     </Section>
 

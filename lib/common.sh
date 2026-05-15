@@ -2,9 +2,11 @@
 # Shared constants and helpers for wallpapers tasks.
 
 # Paths
+# shellcheck disable=SC2034 # Shared constant for tasks that source this file.
 WALLPAPERS_OUTPUT_DIR="$HOME/.local/share/wallpapers"
 WALLPAPERS_CONFIG_DIR="$HOME/.config/wallpapers"
 WALLPAPERS_CONFIG_FILE="$WALLPAPERS_CONFIG_DIR/config.json"
+# shellcheck disable=SC2034 # Shared constant for tasks that source this file.
 WALLPAPERS_STATE_DIR="$HOME/.local/state/wallpapers"
 
 # Return the directory where the user invoked wallpapers.
@@ -36,7 +38,7 @@ wallpapers_resolve_path() {
 # Outputs WxH (e.g. "3024x1964"). Returns 1 if detection fails.
 detect_screen_resolution() {
   local res
-  res=$(system_profiler SPDisplaysDataType 2>/dev/null \
+  res=$("${SYSTEM_PROFILER:-system_profiler}" SPDisplaysDataType 2>/dev/null \
     | grep -i "Resolution:" \
     | head -1 \
     | sed 's/.*: //' \

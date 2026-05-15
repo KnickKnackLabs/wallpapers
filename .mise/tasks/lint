@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#MISE description="Run codebase convention lints"
+set -euo pipefail
+
+rules=(
+  mise-settings
+  bats-test-task
+  bats-test-helper
+  mcr-scope
+  or-true
+  shellcheck
+  gum-table
+)
+
+failures=0
+for rule in "${rules[@]}"; do
+  echo "[lint:$rule]"
+  if ! codebase "lint:$rule" "$MISE_CONFIG_ROOT"; then
+    failures=$((failures + 1))
+  fi
+  echo ""
+done
+
+if [ "$failures" -gt 0 ]; then
+  echo "codebase lint failed: $failures rule(s)" >&2
+  exit 1
+fi

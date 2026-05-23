@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #MISE description="Apply workspace config (wallpapers, apps, or both)"
 #MISE alias="default"
-#USAGE arg "[name]" help="Workspace name/id to apply (optional - shows picker if omitted)"
+#USAGE arg "[name]" default="" help="Workspace name/id to apply (optional - shows picker if omitted)"
 #USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
-#USAGE flag "--wallpapers" help="Only apply wallpapers"
-#USAGE flag "--apps" help="Only launch and position apps"
-#USAGE flag "--config <config>" help="Config file to apply (default: ~/.config/wallpapers/config.json)"
-#USAGE flag "--clean" help="Close previous app windows before applying"
-#USAGE flag "--yes" help="Approve Space count changes or mismatch continuation without prompting"
-#USAGE flag "-y" help="Alias for --yes"
+#USAGE flag "--wallpapers" default=#false help="Only apply wallpapers"
+#USAGE flag "--apps" default=#false help="Only launch and position apps"
+#USAGE flag "--config <config>" default="" help="Config file to apply (default: ~/.config/wallpapers/config.json)"
+#USAGE flag "--clean" default=#false help="Close previous app windows before applying"
+#USAGE flag "--yes" default=#false help="Approve Space count changes or mismatch continuation without prompting"
+#USAGE flag "-y" default=#false help="Alias for --yes"
 set -euo pipefail
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 
@@ -20,11 +20,11 @@ PGREP="${PGREP:-pgrep}"
 HS_CLI="${HS_CLI:-/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs}"
 
 YES=false
-if [ "${usage_yes:-false}" = "true" ] || [ "${usage_y:-false}" = "true" ]; then
+if [ "$usage_yes" = "true" ] || [ "$usage_y" = "true" ]; then
     YES=true
 fi
 
-if [ -n "${usage_config:-}" ]; then
+if [ -n "$usage_config" ]; then
     WALLPAPERS_CONFIG_FILE=$(wallpapers_resolve_path "$usage_config")
 fi
 
@@ -41,9 +41,9 @@ fi
 # Determine what to apply (default: both)
 DO_WALLPAPERS=true
 DO_APPS=true
-if [ "${usage_wallpapers:-}" = "true" ] || [ "${usage_apps:-}" = "true" ]; then
-    DO_WALLPAPERS="${usage_wallpapers:-false}"
-    DO_APPS="${usage_apps:-false}"
+if [ "$usage_wallpapers" = "true" ] || [ "$usage_apps" = "true" ]; then
+    DO_WALLPAPERS="$usage_wallpapers"
+    DO_APPS="$usage_apps"
 fi
 
 is_interactive() {

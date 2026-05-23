@@ -22,6 +22,6 @@ shellcheck = "0.11.0"
 "shiv:readme" = "latest"
 
 [_.codebase]
-lint = ["mise-settings", "bats-test-task", "bats-test-helper", "mcr-scope", "or-true", "shellcheck"]
+lint = ["mise-settings", "bats-test-task", "bats-test-helper", "mcr-scope", "or-true", "shellcheck", "gum-table"]
 
 # Note: Swift is built-in on macOS, no need to manage it

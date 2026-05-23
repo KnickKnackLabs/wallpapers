@@ -195,6 +195,25 @@ write_spaces_config() {
   fi
 }
 
+@test "apply ignores inherited usage_yes in non-interactive runs" {
+  config="$CALLER_PWD/two-spaces.json"
+  write_spaces_config "$config" 2
+  printf '1\n' > "$MOCK_SPACE_COUNT"
+  usage_yes=true
+  usage_y=true
+  export usage_yes usage_y
+
+  run wallpapers apply --config "$config" --wallpapers
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Confirmation required"* ]]
+  [ "$(cat "$MOCK_SPACE_COUNT")" = "1" ]
+  if grep -q "spaces:add" "$MOCK_BUTTHAIR_LOG"; then
+    echo "unexpected spaces:add call" >&2
+    return 1
+  fi
+}
+
 @test "apply --yes adds missing Spaces before applying wallpapers" {
   config="$CALLER_PWD/three-spaces.json"
   write_spaces_config "$config" 3

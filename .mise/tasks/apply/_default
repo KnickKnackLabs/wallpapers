@@ -19,13 +19,73 @@ OSASCRIPT="${OSASCRIPT:-osascript}"
 PGREP="${PGREP:-pgrep}"
 HS_CLI="${HS_CLI:-/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs}"
 
+apply_config=""
+apply_wallpapers=false
+apply_apps=false
+apply_clean=false
+apply_yes=false
+apply_target_seen=false
+
+usage_error() {
+    echo "error: $*" >&2
+    exit 2
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --wallpapers)
+            apply_wallpapers=true
+            ;;
+        --apps)
+            apply_apps=true
+            ;;
+        --clean)
+            apply_clean=true
+            ;;
+        --yes|-y)
+            apply_yes=true
+            ;;
+        --config)
+            shift
+            if [ "$#" -eq 0 ]; then
+                usage_error "--config requires a value"
+            fi
+            apply_config="$1"
+            ;;
+        --config=*)
+            apply_config="${1#--config=}"
+            ;;
+        --)
+            shift
+            while [ "$#" -gt 0 ]; do
+                if [ "$apply_target_seen" = "true" ]; then
+                    usage_error "unexpected argument: $1"
+                fi
+                apply_target_seen=true
+                shift
+            done
+            break
+            ;;
+        -*)
+            usage_error "unknown argument: $1"
+            ;;
+        *)
+            if [ "$apply_target_seen" = "true" ]; then
+                usage_error "unexpected argument: $1"
+            fi
+            apply_target_seen=true
+            ;;
+    esac
+    shift
+done
+
 YES=false
-if [ "${usage_yes:-false}" = "true" ] || [ "${usage_y:-false}" = "true" ]; then
+if [ "$apply_yes" = "true" ]; then
     YES=true
 fi
 
-if [ -n "${usage_config:-}" ]; then
-    WALLPAPERS_CONFIG_FILE=$(wallpapers_resolve_path "$usage_config")
+if [ -n "$apply_config" ]; then
+    WALLPAPERS_CONFIG_FILE=$(wallpapers_resolve_path "$apply_config")
 fi
 
 require_config "$WALLPAPERS_CONFIG_FILE"
@@ -41,9 +101,9 @@ fi
 # Determine what to apply (default: both)
 DO_WALLPAPERS=true
 DO_APPS=true
-if [ "${usage_wallpapers:-}" = "true" ] || [ "${usage_apps:-}" = "true" ]; then
-    DO_WALLPAPERS="${usage_wallpapers:-false}"
-    DO_APPS="${usage_apps:-false}"
+if [ "$apply_wallpapers" = "true" ] || [ "$apply_apps" = "true" ]; then
+    DO_WALLPAPERS="$apply_wallpapers"
+    DO_APPS="$apply_apps"
 fi
 
 is_interactive() {
@@ -213,7 +273,7 @@ SCREEN_H=$(resolution_height "$SCREEN_RES")
         CURRENT_SPACE=$("$BUTTHAIR" spaces:current -- -i 2>/dev/null)
 
         # Optionally close previous windows first
-        if [ "${usage_clean:-false}" = "true" ] && [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
+        if [ "$apply_clean" = "true" ] && [ -f "$STATE_FILE" ] && [ -s "$STATE_FILE" ]; then
             PREV_COUNT=$(grep -c . "$STATE_FILE")
             "$GUM" style --foreground 245 "Closing $PREV_COUNT previous window(s)..."
             PREV_SPACES=()

@@ -8,4 +8,5 @@
 #USAGE flag "--bg-color <color>" help="Background hex color"
 #USAGE flag "--text-color <color>" help="Text hex color"
 #USAGE flag "--style <style>" help="Visual style: classic, diagonal, tiled, flowfield, typography, perspective"
+#USAGE example "wp cli Code --resolution 4k --style diagonal" header="Generate one labeled wallpaper"
 swift run generate -- "$@"

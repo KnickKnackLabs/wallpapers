@@ -4,27 +4,41 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MISE_JOBS: 1
 
 jobs:
   test:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verify shell tasks
-        run: |
-          mise run test
-          codebase lint:mise-settings "$PWD"
-          codebase lint:bats-test-task "$PWD"
-          codebase lint:bats-test-helper "$PWD"
-          codebase lint:mcr-scope "$PWD"
-          codebase lint:or-true "$PWD"
-          codebase lint:shellcheck "$PWD"
+
+      - name: Set up mise
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+
+      - name: Run tests
+        run: mise run test
+
+      - name: Run codebase lints
+        run: codebase lint "$PWD"
+
       - name: Verify Swift package
+        if: runner.os == 'macOS'
         run: swift test
-      - name: Verify generated README
-        run: |
-          mise run readme
-          git diff --exit-code README.md
+
+      - name: Check README.md is up to date
+        uses: KnickKnackLabs/readme@v0.3.1
+        with:
+          check: true

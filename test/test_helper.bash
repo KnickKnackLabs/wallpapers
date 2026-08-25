@@ -13,7 +13,7 @@ wallpapers() {
   local caller="${WALLPAPERS_CALLER_PWD:-${CALLER_PWD:-$PWD}}"
   (
     cd "$REPO_ROOT" || exit
-    WALLPAPERS_CALLER_PWD="$caller" CALLER_PWD="$caller" mise run -q "$@"
+    WALLPAPERS_CALLER_PWD="$caller" mise run -q "$@"
   )
 }
 export -f wallpapers

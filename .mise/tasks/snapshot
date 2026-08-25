@@ -101,4 +101,4 @@ else
 fi
 
 NODE_PATH="${MISE_CONFIG_ROOT}/tsx-runtime" \
-  bun "${MISE_CONFIG_ROOT}/tsx-runtime/snapshot.ts" "${args[@]}"
+  bun "${MISE_CONFIG_ROOT}/tsx-runtime/snapshot.ts" ${args[@]+"${args[@]}"}

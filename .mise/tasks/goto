@@ -2,6 +2,8 @@
 #MISE description="Switch to a workspace by name"
 #USAGE arg "[name]" help="Workspace name/id, or '-' to go back (shows picker if omitted)"
 #USAGE complete "name" run="jq -r '.workspaces[] | (.id // .name) + \":\" + (.description // .name)' ~/.config/wallpapers/config.json 2>/dev/null" descriptions=#true
+#USAGE example "wp goto code" header="Switch to a workspace by name"
+#USAGE example "wp goto -" header="Return to the previous workspace"
 set -e
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 

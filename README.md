@@ -25,7 +25,7 @@ This tool generates wallpapers with labels so you can tell them apart.
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
 ![tasks: 23](https://img.shields.io/badge/tasks-23-blue?style=flat)
-![tests: 34](https://img.shields.io/badge/tests-34-green?style=flat)
+![tests: 41](https://img.shields.io/badge/tests-41-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -85,50 +85,50 @@ For repo-owned recipes, write `WALLPAPERS.tsx`, then run `wp build`. Extra build
 
 Auto-detect is the default. You can also specify a preset with `--resolution`:
 
-| Preset | Dimensions |
-| --- | --- |
-| `1080p` | 1920×1080 |
-| `1440p` | 2560×1440 |
-| `4k` | 3840×2160 |
-| `macbook-14` | 3024×1964 |
-| `macbook-16` | 3456×2234 |
-| `imac-24` | 4480×2520 |
-| `studio-display` | 5120×2880 |
+| Preset           | Dimensions |
+| ---------------- | ---------- |
+| `1080p`          | 1920×1080  |
+| `1440p`          | 2560×1440  |
+| `4k`             | 3840×2160  |
+| `macbook-14`     | 3024×1964  |
+| `macbook-16`     | 3456×2234  |
+| `imac-24`        | 4480×2520  |
+| `studio-display` | 5120×2880  |
 
 ## All tasks
 
-| Task | Description |
-| --- | --- |
-| `ai` | Agent instructions for helping users |
-| `apply` | Apply workspace config (wallpapers, apps, or both) |
-| `apply:undo` | Close windows created by the last 'apply --apps' |
-| `build` | Build WALLPAPERS.tsx into a versioned JSON config |
-| `clean` | Remove all generated wallpapers |
-| `cli` | Run generator directly with arguments |
-| `config:edit` | Edit config file in your editor |
-| `config:init` | Initialize config file with example workspaces |
-| `generate` | Generate a wallpaper interactively |
-| `goto` | Switch to a workspace by name |
-| `hammerspoon:config` | Install wp workspace integration into Hammerspoon config |
-| `help` | Show generator CLI help |
-| `info:list` | List generated wallpapers |
-| `info:resolution` | Show your screen resolution |
-| `info:space` | Show current desktop space |
-| `info:wallpaper` | Show current wallpaper file path |
-| `lint` | Run codebase convention lints |
-| `open` | Open the wallpapers directory in Finder |
-| `quick` | Quick generate with just a name (auto-detects screen resolution) |
-| `readme` | Regenerate README.md from README.tsx |
-| `shell` | Output shell configuration (use with eval) |
-| `snapshot` | Snapshot current macOS Spaces into a starter WALLPAPERS.tsx |
-| `tutorial` | Interactive tutorial to learn the wallpaper generator |
+| Task                 | Description                                                      |
+| -------------------- | ---------------------------------------------------------------- |
+| `ai`                 | Agent instructions for helping users                             |
+| `apply`              | Apply workspace config (wallpapers, apps, or both)               |
+| `apply:undo`         | Close windows created by the last 'apply --apps'                 |
+| `build`              | Build WALLPAPERS.tsx into a versioned JSON config                |
+| `clean`              | Remove all generated wallpapers                                  |
+| `cli`                | Run generator directly with arguments                            |
+| `config:edit`        | Edit config file in your editor                                  |
+| `config:init`        | Initialize config file with example workspaces                   |
+| `generate`           | Generate a wallpaper interactively                               |
+| `goto`               | Switch to a workspace by name                                    |
+| `hammerspoon:config` | Install wp workspace integration into Hammerspoon config         |
+| `help`               | Show generator CLI help                                          |
+| `info:list`          | List generated wallpapers                                        |
+| `info:resolution`    | Show your screen resolution                                      |
+| `info:space`         | Show current desktop space                                       |
+| `info:wallpaper`     | Show current wallpaper file path                                 |
+| `lint`               | Run codebase convention lints                                    |
+| `open`               | Open the wallpapers directory in Finder                          |
+| `quick`              | Quick generate with just a name (auto-detects screen resolution) |
+| `readme`             | Regenerate README.md from README.tsx                             |
+| `shell`              | Output shell configuration (use with eval)                       |
+| `snapshot`           | Snapshot current macOS Spaces into a starter WALLPAPERS.tsx      |
+| `tutorial`           | Interactive tutorial to learn the wallpaper generator            |
 
 ## Development
 
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 34 tests
+mise run test   # 41 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

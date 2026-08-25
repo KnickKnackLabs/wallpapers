@@ -80,11 +80,11 @@ if [ "$build_check" = "true" ]; then
   args+=("--check")
 fi
 if [ "${#recipe_args[@]}" -gt 0 ]; then
-  args+=("--" "${recipe_args[@]}")
+  args+=("--" ${recipe_args[@]+"${recipe_args[@]}"})
 fi
 
 (
   cd "$caller_dir" || exit
   NODE_PATH="${MISE_CONFIG_ROOT}/tsx-runtime" \
-    bun "${MISE_CONFIG_ROOT}/tsx-runtime/build.ts" "${args[@]}"
+    bun "${MISE_CONFIG_ROOT}/tsx-runtime/build.ts" ${args[@]+"${args[@]}"}
 )

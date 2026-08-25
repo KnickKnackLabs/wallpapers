@@ -9,6 +9,8 @@
 #USAGE flag "--clean" default=#false help="Close previous app windows before applying"
 #USAGE flag "--yes" default=#false help="Approve Space count changes or mismatch continuation without prompting"
 #USAGE flag "-y" default=#false help="Alias for --yes"
+#USAGE example "wp apply code" header="Apply one configured workspace"
+#USAGE example "wp apply --config ./WALLPAPERS.json --wallpapers --yes" header="Apply an explicit config non-interactively"
 set -euo pipefail
 source "${MISE_CONFIG_ROOT}/lib/common.sh"
 

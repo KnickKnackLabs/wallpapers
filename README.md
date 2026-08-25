@@ -25,7 +25,7 @@ This tool generates wallpapers with labels so you can tell them apart.
 ![lang: Swift + Bash](https://img.shields.io/badge/lang-Swift%20%2B%20Bash-F05138?style=flat&logo=swift&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
 ![tasks: 23](https://img.shields.io/badge/tasks-23-blue?style=flat)
-![tests: 39](https://img.shields.io/badge/tests-39-green?style=flat)
+![tests: 41](https://img.shields.io/badge/tests-41-green?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
 </div>
@@ -128,7 +128,7 @@ Auto-detect is the default. You can also specify a preset with `--resolution`:
 ```bash
 gh repo clone KnickKnackLabs/wallpapers
 cd wallpapers && mise trust && mise install
-mise run test   # 39 tests
+mise run test   # 41 tests
 ```
 
 **Architecture:** Swift layer (`Sources/WallpaperKit/`) handles Core Graphics rendering. Bash tasks in `.mise/tasks/` handle user interaction via `gum`. Shared helpers live in `lib/common.sh`. Space management delegates to [butthair](https://github.com/KnickKnackLabs/butthair).

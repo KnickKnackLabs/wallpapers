@@ -43,14 +43,29 @@ arg_count() {
   awk -F= -v expected="$expected" '$1 == "arg" && substr($0, 5) == expected { count++ } END { print count + 0 }' "$BATS_LOG"
 }
 
-@test "test task defaults to four Rush jobs without disabling within-file concurrency" {
-  run wallpapers test common --filter resolution
+@test "test task selects Rush and preserves complete arguments" {
+  run wallpapers test --filter resolution common
   [ "$status" -eq 0 ]
   [[ "$output" == *"4 jobs via"* ]]
   [ "$(log_value jobs)" = "4" ]
   [ "$(log_value runner)" = "$MOCK_DIR/rush" ]
   [ "$(arg_count --no-parallelize-within-files)" -eq 0 ]
+  [ "$(arg_count --print-output-on-failure)" -eq 1 ]
+  [ "$(arg_count --filter)" -eq 1 ]
+  [ "$(arg_count resolution)" -eq 1 ]
   [ "$(arg_count "$REPO_ROOT/test/common.bats")" -eq 1 ]
+  if [[ "$REPO_ROOT" =~ [[:space:]] ]]; then
+    [ "$(arg_count --no-parallelize-across-files)" -eq 1 ]
+  else
+    [ "$(arg_count --no-parallelize-across-files)" -eq 0 ]
+  fi
+
+  run wallpapers test --jobs 4 --filter "resolution output" common
+  [ "$status" -eq 0 ]
+  [ "$(arg_count --jobs)" -eq 1 ]
+  [ "$(arg_count 4)" -eq 1 ]
+  [ "$(arg_count "resolution output")" -eq 1 ]
+  [ "$(arg_count --no-parallelize-across-files)" -eq 1 ]
 }
 
 @test "explicit serial execution does not require Rush" {
@@ -60,6 +75,24 @@ arg_count() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"BATS parallelism: serial"* ]]
   [ "$(arg_count --no-parallelize-within-files)" -eq 0 ]
+}
+
+@test "serial test path preserves a target containing whitespace" {
+  probe_dir="$BATS_TEST_TMPDIR/serial probe"
+  mkdir -p "$probe_dir"
+  test_keyword='@test'
+  {
+    printf '%s\n' '#!/usr/bin/env bats'
+    printf '%s\n' "$test_keyword \"serial probe passes\" {"
+    printf '%s\n' '  true' '}'
+  } > "$probe_dir/passing test.bats"
+
+  unset BATS_COMMAND RUSH_COMMAND
+  BATS_PARALLEL_BINARY_NAME=missing \
+    run wallpapers test --jobs 1 "$probe_dir/passing test.bats"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1..1"* ]]
 }
 
 @test "parallel execution fails clearly without the selected runner" {
@@ -80,8 +113,8 @@ arg_count() {
   [ ! -e "$BATS_LOG" ]
 }
 
-@test "public Wallpapers test path runs tests within one BATS file concurrently" {
-  probe_dir="$BATS_TEST_TMPDIR/within-file-probe"
+@test "whitespace fallback retains within-file concurrency" {
+  probe_dir="$BATS_TEST_TMPDIR/within file probe"
   export PROBE_DIR="$BATS_TEST_TMPDIR/within-file-barrier"
   mkdir -p "$probe_dir" "$PROBE_DIR"
 
@@ -113,8 +146,38 @@ BATS
   unset BATS_COMMAND RUSH_COMMAND
   unset BATS_NUMBER_OF_PARALLEL_JOBS BATS_PARALLEL_BINARY_NAME
 
-  run wallpapers test "$probe_dir"
+  run wallpapers test --jobs 4 "$probe_dir/within-file.bats"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"4 jobs via"* ]]
+  [[ "$output" == *"4 jobs via rush"* ]]
+}
+
+@test "normal paths retain across-file concurrency" {
+  probe_dir="$BATS_TEST_TMPDIR/across-file-probe"
+  export PROBE_DIR="$BATS_TEST_TMPDIR/across-file-barrier"
+  if [[ "$REPO_ROOT" =~ [[:space:]] || "$probe_dir" =~ [[:space:]] ]]; then
+    skip "bounded whitespace fallback intentionally disables across-file scheduling"
+  fi
+  mkdir -p "$probe_dir" "$PROBE_DIR"
+
+  test_keyword='@test'
+  for side in one two; do
+    other=one
+    [ "$side" = one ] && other=two
+    {
+      printf '%s\n' '#!/usr/bin/env bats'
+      printf '%s\n' "$test_keyword \"$side observes $other\" {"
+      printf '  touch "$PROBE_DIR/%s"\n' "$side"
+      printf '%s\n' '  for _ in {1..50}; do'
+      printf '    [ ! -e "$PROBE_DIR/%s" ] || return 0\n' "$other"
+      printf '%s\n' '    sleep 0.05' '  done' '  false' '}'
+    } > "$probe_dir/$side.bats"
+  done
+
+  unset BATS_COMMAND RUSH_COMMAND
+  unset BATS_NUMBER_OF_PARALLEL_JOBS BATS_PARALLEL_BINARY_NAME
+
+  run wallpapers test --jobs 4 "$probe_dir/one.bats" "$probe_dir/two.bats"
+
+  [ "$status" -eq 0 ]
 }

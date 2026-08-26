@@ -71,44 +71,44 @@ url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/3849249
 provenance = "github-attestations"
 
 [[tools."aqua:KnickKnackLabs/bats-core"]]
-version = "1.14.0-kkl.1"
+version = "1.14.0-kkl.3"
 backend = "aqua:KnickKnackLabs/bats-core"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-arm64"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-arm64-musl"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-x64"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-x64-baseline"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-x64-musl"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.linux-x64-musl-baseline"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.macos-arm64"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.macos-x64"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [tools."aqua:KnickKnackLabs/bats-core"."platforms.macos-x64-baseline"]
-url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.1.tar.gz"
-url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.1"
+url = "https://github.com/KnickKnackLabs/bats-core/archive/refs/tags/v1.14.0-kkl.3.tar.gz"
+url_api = "https://api.github.com/repos/KnickKnackLabs/bats-core/tarball/v1.14.0-kkl.3"
 
 [[tools."aqua:shenwei356/rush"]]
 version = "0.9.0"
